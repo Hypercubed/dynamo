@@ -1,11 +1,11 @@
 {
-  "name": "typescript-starter",
-  "version": "1.0.0",
+  "name": "ts-typed-function",
+  "version": "0.0.0",
   "description": "Typed-functions in TS using decorators",
   "main": "build/main/index.js",
   "typings": "build/main/index.d.ts",
   "module": "build/module/index.js",
-  "repository": "https://github.com/Hypercubed/typed-function-ts",
+  "repository": "https://github.com/Hypercubed/ts-typed-function",
   "license": "MIT",
   "keywords": [],
   "scripts": {
