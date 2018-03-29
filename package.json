@@ -51,7 +51,11 @@
   "engines": {
     "node": ">=8.9"
   },
-  "dependencies": {},
+  "dependencies": {
+    "@types/node": "^9.6.1",
+    "reflect-metadata": "^0.1.12",
+    "typed-function": "^1.0.3"
+  },
   "devDependencies": {
     "ava": "^1.0.0-beta.3",
     "codecov": "^3.0.0",
