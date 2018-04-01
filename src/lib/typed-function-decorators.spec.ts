@@ -5,7 +5,7 @@ import { signature, type, TypedFunction } from './typed-function-decorators';
 class Math extends TypedFunction {
   // The `signature` stores the method for later use in the static `create` function
   // In this case we are not tagging a method name
-  // In many cases the signature can be infered from the TS types
+  // In many cases the signature can be inferred from the TS types
   @signature()
   add_numbers(a: number, b: number) {
     return a + b;
@@ -16,10 +16,10 @@ class Math extends TypedFunction {
     return a + b;
   }
 
-  // Here we are creating the `add` insatnce method which will be the typed-function for the two methods above
+  // Here we are creating the `add` instance method which will be the typed-function for the two methods above
   // Since we added these two methods as signatures without a name
   // the function returned from `create` is anonymous
-  // Notice the type for `add` is the intesection of `pow` and `repeat` instance methods
+  // Notice the type for `add` is the intersection of `pow` and `repeat` instance methods
   add: Math['add_numbers'] & Math['add_strings'] = Math.create();
 
   // Here we are defining a signature for the `power` function
@@ -35,7 +35,7 @@ class Math extends TypedFunction {
   }
 
   // Here we are generating the 'power' function and adding it to the instance as `power`
-  // We can also pass the intesection type this way to teh `create` static method
+  // We can also pass the intersection type this way to teh `create` static method
   power = Math.create<Math['pow'] & Math['repeat']>('power');
 
   // Here we are using a single function for multiple types
@@ -44,7 +44,7 @@ class Math extends TypedFunction {
   double_prim(a: number): number;
 
   // Here we are "assigning" them to a function named 'double'.
-  // Notice here we are defining each signiture, we cannot infer the type from an override method
+  // Notice here we are defining each signature, we cannot infer the type from an override method
   @signature('double', ['number'])
   @signature('double', ['string'])
   double_prim(a: any): any {
@@ -124,7 +124,7 @@ test('can create function directly from existing signatures', t => {
 });
 
 test('can create function directly from the signatures', t => {
-  // we can create type-functions directly, but notce the redundancy
+  // we can create type-functions directly, but notice the redundancy
   const double = Math.create<((z: string) => string) & ((z: number) => number)>('double', {
     'string | number': (a: any) => a + a
   });
@@ -217,7 +217,12 @@ test('readme example', t => {
   t.is(typeof fn, 'function');
   t.is(fn(15, true), 'a is the number 15, b is TRUE');
   t.is(fn('hello', false), 'a is "hello", b is FALSE');
-  t.throws(() => {
+  try {
     (fn as any)('hello', 'false');
-  });
+  } catch (err) {
+    t.is(
+      err.toString(),
+      'TypeError: Unexpected type of argument in function unnamed (expected: boolean, actual: string, index: 1)'
+    );
+  }
 });

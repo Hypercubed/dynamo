@@ -19,7 +19,43 @@ Typed-functions in TS using decorators
 * Input arguments inferred from TypeScript types
 * Appropriate type signatures for typed functions.
 
-## Usage
+## TLDR Usage
+
+(because nobody reads past the first example)
+
+```ts
+import { signature, type } from './ts-typed-function';
+
+class Fn extends TypedFunction {
+  @signature()
+  num(a: number, b: boolean) {
+    return `a is the number ${a}, b is the boolean ${b}`;
+  }
+
+  @signature()
+  str(a: string, b: boolean) {
+    return `a is the string ${a}, b is the boolean ${b}`;
+  }
+}
+
+const fn = Fn.create<Fn['num'] & Fn['str']>();
+
+// use the functions
+console.log(fn(42, true));              // outputs 'a is the number 42, b is TRUE'
+console.log(fn('everything', false));   // outputs 'a is "everything", b is FALSE'
+ 
+try {
+  // fn('hello', 'world');       // This will not pass TS compiler
+  (fn as any)('hello', 'world'); // This will
+}
+catch (err) {
+  console.log(err.toString());
+  // outputs:  TypeError: Unexpected type of argument in function unnamed
+  // (expected: boolean, actual: string, index: 1)
+}
+```
+
+## Usage Explanation
 
 ### `typed-function` without TypeScript
 
@@ -104,9 +140,10 @@ The `@signature` method decorator is able to derive the `typed-function` signatu
 
 ### Advanced Usage (TBR)
 
-* Complex types
-* Multiple signature sets per class
+* Complex/explicit types
+* Multiple signature sets per class/named functions
 * Type definitions
+* type conversions (implementation TBD)
 * Inheritance (implementation TBD)
 
 License
