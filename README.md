@@ -45,7 +45,7 @@ console.log(fn(42, true));              // outputs 'a is the number 42, b is TRU
 console.log(fn('everything', false));   // outputs 'a is "everything", b is FALSE'
  
 try {
-  // fn('hello', 'world');       // This will not pass TS compiler
+  // fn('hello', 'world');       // This will not pass the TS compiler
   (fn as any)('hello', 'world'); // This will
 }
 catch (err) {
@@ -92,7 +92,7 @@ const fn = typed({
 });
 ```
 
-The resulting function has teh same runtime behavior.  However, we notice two issues:
+The resulting function has the same runtime behavior.  However, we notice two issues:
 
 1) The input parameter types are redundantly defined, once for TypeScript and once for `typed-function`.
 2) The resulting function `fn` has a TypeScript type of `any`, and therefore provides no type safety.
@@ -136,14 +136,14 @@ class Fn extends TypedFunction {
 const fn = Fn.create<Fn['num'] & Fn['str']>();
 ```
 
-The `@signature` method decorator is able to derive the `typed-function` signatures from the typeScript signature (this only supports basic types, more on this later).  We must still explicitly type the resulting function but we can refer to types by the method name.
+The `@signature` method decorator is able to derive the `typed-function` signatures from the TypeScript signature (this only supports basic types, more on this later).  We must still explicitly type the resulting function but we can refer to types by the method name.
 
 ### Advanced Usage (TBR)
 
-* Complex/explicit types
+* explicit/complex types
 * Multiple signature sets per class/named functions
 * Type definitions
-* type conversions (implementation TBD)
+* Type conversions (implementation TBD)
 * Inheritance (implementation TBD)
 
 License
