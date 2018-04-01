@@ -2,7 +2,7 @@
 import { test } from 'ava';
 import { signature, type, TypedFunction } from './typed-function-decorators';
 
-class Math extends TypedFunction {
+class MyMath extends TypedFunction {
   // The `signature` stores the method for later use in the static `create` function
   // In this case we are not tagging a method name
   // In many cases the signature can be inferred from the TS types
@@ -20,7 +20,7 @@ class Math extends TypedFunction {
   // Since we added these two methods as signatures without a name
   // the function returned from `create` is anonymous
   // Notice the type for `add` is the intersection of `pow` and `repeat` instance methods
-  add: Math['add_numbers'] & Math['add_strings'] = Math.create();
+  add: MyMath['add_numbers'] & MyMath['add_strings'] = MyMath.create();
 
   // Here we are defining a signature for the `power` function
   @signature('power')
@@ -36,7 +36,7 @@ class Math extends TypedFunction {
 
   // Here we are generating the 'power' function and adding it to the instance as `power`
   // We can also pass the intersection type this way to teh `create` static method
-  power = Math.create<Math['pow'] & Math['repeat']>('power');
+  power = MyMath.create<MyMath['pow'] & MyMath['repeat']>('power');
 
   // Here we are using a single function for multiple types
   // These are TS overrides
@@ -71,17 +71,17 @@ class Math extends TypedFunction {
   }
 
   // notice however the type definition is different for static methods
-  sub: Math['sub_numbers'] & typeof Math.sub_strings = Math.create('sub');
+  sub: MyMath['sub_numbers'] & typeof MyMath.sub_strings = MyMath.create('sub');
 }
 
-let math: Math;
+let math: MyMath;
 
 test.beforeEach(() => {
-  math = new Math();
+  math = new MyMath();
 });
 
 test('can create a instantiate a class with typed-functions', t => {
-  t.true(math instanceof Math);
+  t.true(math instanceof MyMath);
 });
 
 test('add', t => {
@@ -115,7 +115,7 @@ test('sub', t => {
 test('can create function directly from existing signatures', t => {
   // here we are creating a type function like we do above
   // bot outside the class instances
-  const double = Math.create<Math['double_prim'] & Math['double_array']>('double');
+  const double = MyMath.create<MyMath['double_prim'] & MyMath['double_array']>('double');
   t.is(double(2), 4);
   t.is(double('2'), '22');
   
@@ -125,7 +125,7 @@ test('can create function directly from existing signatures', t => {
 
 test('can create function directly from the signatures', t => {
   // we can create type-functions directly, but notice the redundancy
-  const double = Math.create<((z: string) => string) & ((z: number) => number)>('double', {
+  const double = MyMath.create<((z: string) => string) & ((z: number) => number)>('double', {
     'string | number': (a: any) => a + a
   });
   t.is(double(2), 4);
@@ -199,30 +199,258 @@ test('added types', t => {
   t.is(sayMyName(a), 'Hello lizard');
 });
 
-test('readme example', t => {
+test('readme basic example', t => {
+  class Fish {
+    constructor(public name: string) {}
+  }
+
   class Fn extends TypedFunction {
     @signature()
-    fn1(a: number, b: boolean) {
+    num(a: number, b: boolean) {
       return `a is the number ${a}, b is ${b.toString().toUpperCase()}`;
     }
   
     @signature()
-    fn2(a: string, b: boolean) {
-      return `a is "${a}", b is ${b.toString().toUpperCase()}`;
+    str(a: string) {
+      return `a is "${a}"`;
+    }
+
+    @signature()
+    fish(a: Fish) {
+      return `a is a fish named ${a.name}`;
+    }
+  
+    @type('Fish')
+    isFish(a: any): a is Fish {
+      return a instanceof Fish;
     }
   }
   
-  const fn = Fn.create<Fn['fn1'] & Fn['fn2']>();
+  const fn = Fn.create<Fn['num'] & Fn['str'] & Fn['fish']>();
 
   t.is(typeof fn, 'function');
   t.is(fn(15, true), 'a is the number 15, b is TRUE');
-  t.is(fn('hello', false), 'a is "hello", b is FALSE');
+  t.is(fn('hello'), 'a is "hello"');
+  t.is(fn(new Fish('wanda')), 'a is a fish named wanda');
+
   try {
-    (fn as any)('hello', 'false');
+    (fn as any)(42, 'false');
   } catch (err) {
     t.is(
       err.toString(),
       'TypeError: Unexpected type of argument in function unnamed (expected: boolean, actual: string, index: 1)'
     );
   }
+
+  t.is(fn.name, '');
+});
+
+test('readme named example', t => {
+  class Fn extends TypedFunction {
+    @signature('double')
+    double(a: string) {
+      return a + a;
+    }
+  
+    @signature('double')
+    twice(a: number) {
+      return 2 * a;
+    }
+
+    @signature('power')
+    pow(a: number, b: number) {
+      return a ** b;
+    }
+  
+    // This will be combined with the signature above
+    @signature('repeat')
+    @signature('power')
+    repeat(a: string, b: number) {
+      return a.repeat(b);
+    }
+  }
+  
+  const double = Fn.create<Fn['double'] & Fn['twice']>('double');
+  const power = Fn.create<Fn['pow'] & Fn['repeat']>('power');
+  const repeat = Fn.create<Fn['repeat']>('repeat');
+
+  t.is(typeof double, 'function');
+  t.is(double.name, 'double');
+
+  t.is(typeof power, 'function');
+  t.is(power.name, 'power');
+
+  t.is(typeof repeat, 'function');
+  t.is(repeat.name, 'repeat');
+
+  t.is(double(15), 30);
+  t.is(double('boo'), 'booboo');
+
+  t.is(power(2, 3), 8);
+  t.is(power('boo', 3), 'boobooboo');
+
+  t.is(repeat('boo', 3), 'boobooboo');
+});
+
+test('readme override example', t => {
+  class Fn extends TypedFunction {
+    double(a: string): string;
+    double(a: number): number;
+  
+    @signature('double', ['string'])
+    @signature('double', ['number'])
+    double(a: any): any {
+      return a + a;
+    }
+  }
+  
+  const double = Fn.create<Fn['double']>('double');
+
+  t.is(typeof double, 'function');
+  t.is(double.name, 'double');
+
+  t.is(double(15), 30);
+  t.is(double('boo'), 'booboo');
+});
+
+test('explicit types', t => {
+  class A {
+
+  }
+  class Fn extends TypedFunction {
+    @signature(['number | string'])
+    num(a: number | string): any { return +a; }
+  
+    @signature()
+    val(a: A): any { return a.valueOf(); }
+
+    @type()
+    A(a: any): a is A {
+      return a instanceof A;
+    }
+  }
+
+  const fn = Fn.create<Fn['num'] & Fn['val']>();
+
+  t.is(typeof fn, 'function');
+  t.is(fn.name, '');
+
+  t.deepEqual(Object.keys((fn as any).signatures), [
+    'number',
+    'string',
+    'A'
+  ]);
+});
+
+test('all types', t => {
+  enum D {
+    Up,
+    Down,
+    Left,
+    Right,
+  }
+
+  class A {
+
+  }
+
+  class Fn extends TypedFunction {
+    @signature()
+    i(a: number): any { return a; }
+
+    @signature()
+    j(a: string): any { return a; }
+
+    @signature()
+    k(a: boolean): any { return a; }
+
+    @signature()
+    a(a: any): any { return a; }
+
+    @signature()
+    b(a: any[]): any { return a; }
+
+    @signature()
+    c(a: D): any { return a; }
+
+    @signature()
+    d(a: () => any): any { return a; }
+
+    @signature()
+    e(a: A): any { return a; }
+
+    @signature()
+    f(a: Date): any { return a; }
+
+    @signature()
+    g(a: RegExp): any { return a; }
+
+    @type('A')
+    isA(a: any): boolean { return a instanceof A; }
+
+    @signature('y', ['number | string'])
+    h(a: number | string): any { return a; }
+  }
+
+  const x = Fn.create();
+  const y = Fn.create('y');
+
+  t.deepEqual(Object.keys((x as any).signatures), [
+    'number',
+    'string',
+    'boolean',
+    'Function',
+    'Array',
+    'Date',
+    'RegExp',
+    'Object',
+    'A'
+  ]);
+
+  t.deepEqual(Object.keys((y as any).signatures), [
+    'number',
+    'string'
+  ]);
+});
+
+test('instance', t => {
+  class FishFood {
+    constructor(public name: string) {}
+  }
+
+  class Fish extends TypedFunction {
+    constructor(public name: string) {
+      super();
+    }
+
+    @signature()
+    protected eatFood(a: FishFood): string {
+      return `Yum, ${a.name}!`;
+    }
+
+    @signature()
+    protected eatFish(a: Fish): string {
+      return `No way, I won't eat ${a.name}`;
+    }
+
+    @type('Fish')
+    static isFish(a: any): a is Fish {
+      return a instanceof Fish;
+    }
+
+    @type('FishFood')
+    protected isFishFood(a: any): a is FishFood {
+      return a instanceof FishFood;
+    }
+
+    eat = Fish.create<Fish['eatFood'] & Fish['eatFish']>(); 
+  }
+
+  const f = new Fish('Wanda');
+  
+  t.is(typeof f.eat, 'function');
+  t.is(f.eat(new FishFood('worms')), 'Yum, worms!');
+  t.is(f.eat(new Fish('Nemo')), 'No way, I won\'t eat Nemo');
+
+  t.is(f.eat.name, '');
 });
