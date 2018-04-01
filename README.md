@@ -2,206 +2,113 @@
 
 Typed-functions in TS using decorators
 
-## Spec
+## Introduction
 
-```ts
-import { test } from 'ava';
-import { signature, type, TypedFunction } from './typed-function-decorators';
+[josdejong/typed-function](https://github.com/josdejong/typed-function) provides a flexible and organized way to do run-time type checking in JavaScript.  `ts-typed-function` is an experimental TypeScript wrapper on top of `typed-function`.
 
-class Math extends TypedFunction {
-  // The `signature` stores the method for later use in the static `create` function
-  // In this case we are not tagging a method name
-  // In many cases the signature can be infered from the TS types
-  @signature()
-  add_numbers(a: number, b: number) {
-    return a + b;
+`typed-function` has the following features:
+
+* Runtime type-checking of input arguments.
+* Automatic type conversion of arguments.
+* Compose typed functions with multiple signatures.
+* Supports union types, any type, and variable arguments.
+* Detailed error messaging.
+
+`ts-typed-function` adds the following:
+
+* Input arguments inferred from TypeScript types
+* Appropriate type signatures for typed functions.
+
+## Usage
+
+### `typed-function` without TypeScript
+
+```js
+const typed = require('typed-function');
+
+// create a typed function
+const fn = typed({
+  'number, boolean': function (a, b) {
+    return `a is the number ${a}, b is ${b.toString().toUpperCase()}`;
+  },
+  'string, boolean': function (a, b) {
+    return `a is "${a}", b is ${b.toString().toUpperCase()}`;
   }
-
-  @signature()
-  add_strings(a: string, b: string) {
-    return a + b;
-  }
-
-  // Here we are creating the `add` insatnce method which will be the typed-function for the two methods above
-  // Since we added these two methods as signatures without a name
-  // the function returned from `create` is anonymous
-  // Notice the type for `add` is the intesection of `pow` and `repeat` instance methods
-  add: Math['add_numbers'] & Math['add_strings'] = Math.create();
-
-  // Here we are defining a signature for the `power` function
-  @signature('power')
-  pow(a: number, b: number) {
-    return a ** b;
-  }
-
-  // This will be combined with the signature above
-  @signature('power')
-  repeat(a: string, b: number) {
-    return a.repeat(b);
-  }
-
-  // Here we are generating the 'power' function and adding it to the instance as `power`
-  // We can also pass the intesection type this way to teh `create` static method
-  power = Math.create<Math['pow'] & Math['repeat']>('power');
-
-  // Here we are using a single function for multiple types
-  // These are TS overrides
-  double_prim(a: string): string;
-  double_prim(a: number): number;
-
-  // Here we are "assigning" them to a function named 'double'.
-  // Notice here we are defining each signiture, we cannot infer the type from an override method
-  @signature('double', ['number'])
-  @signature('double', ['string'])
-  double_prim(a: any): any {
-    return a + a;
-  }
-
-  @signature('double')
-  double_array(a: Array<any>) {
-    return a.concat(a);
-  }
-
-  // notice we don't create a `double` methods, it's not needed if we don't want it on these instances
-
-  // signatures can also be protected
-  @signature('sub')
-  protected sub_numbers(a: number, b: number) {
-    return a - b;
-  }
-
-  // or static
-  @signature('sub')
-  static sub_strings(a: string, b: string) {
-    return a.split(b).join('');
-  }
-
-  // notice however the type definition is different for static methods
-  sub: Math['sub_numbers'] & typeof Math.sub_strings = Math.create('sub');
-}
-
-let math: Math;
-
-test.beforeEach(() => {
-  math = new Math();
-});
-
-test('can create a instantiate a class with typed-functions', t => {
-  t.true(math instanceof Math);
-});
-
-test('add', t => {
-  // Calling the add function works
-  // In addition TS is aware of the function signatures
-  t.is(math.add(2, 3), 5);
-  t.is(math.add('x', 'y'), 'xy');
-
-  // this typed-function is unnamed
-  t.is(math.add.name, '');
-});
-
-test('power', t => {
-  t.is(math.power(2, 4), 16);
-  t.is(math.power('2', 4), '2222');
-
-  // this typed-function is named
-  t.is(math.power.name, 'power');
-});
-
-test('sub', t => {
-  // Calling the add function works
-  // In addition TS provides the function signatures
-  t.is(math.sub(5, 3), 2);
-  t.is(math.sub('xyz', 'y'), 'xz');
-
-  // this typed-function is named
-  t.is(math.sub.name, 'sub');
-});
-
-test('can create function directly from existing signatures', t => {
-  // here we are creating a type function like we do above
-  // bot outside the class instances
-  const double = Math.create<Math['double_prim'] & Math['double_array']>('double');
-  t.is(double(2), 4);
-  t.is(double('2'), '22');
-  
-  // this typed-function is names
-  t.is(double.name, 'double');
-});
-
-test('can create function directly from the signatures', t => {
-  // we can create type-functions directly, but notce the redundancy
-  const double = Math.create<((z: string) => string) & ((z: number) => number)>('double', {
-    'string | number': (a: any) => a + a
-  });
-  t.is(double(2), 4);
-  t.is(double('2'), '22');
-  
-  // this typed-function is named
-  t.is(double.name, 'double');
-});
-
-test('throws at runtime on bad signature', t => {
-  t.throws(() => {
-    math.power(2, '4' as any)
-  });
-});
-
-test('compile time check', t => {
-  // t.false(onlyAcceptsStrings(math.power(2, 4)));  // this won't pass TS
-  t.true(onlyAcceptsStrings(math.power('2', 4)));
-
-  function onlyAcceptsStrings(x: string) {
-    return typeof x === 'string';
-  }
-});
-
-
-class WildAnimal extends TypedFunction {
-  constructor(public type: string) {
-    super();
-  }
-}
-
-class Pet extends WildAnimal {
-  constructor(public name: string) {
-    super('pet');
-  }
-
-  @signature()
-  static sayA(x: WildAnimal) {
-    return `Hello ${x.type}`;
-  }
-
-  @signature()
-  static sayB(x: Pet) {
-    return `Hello ${x.name}`;
-  }
-
-  // type definitions
-  // by default use the property name as the type name
-  @type()
-  static WildAnimal(x: any): x is WildAnimal {
-    return x && x instanceof WildAnimal && !(x instanceof Pet);
-  }
-
-  // here we specify the type name
-  @type('Pet')
-  static isPet(x: any): x is Pet {
-    return x && x instanceof Pet;
-  }
-}
-
-test('each class gets its own type api', t => {
-  t.false((Pet as any).typed === (WildAnimal as any).typed);
-});
-
-test('added types', t => {
-  const a = new WildAnimal('lizard');
-  const b = new Pet('Rover');
-
-  const sayMyName = Pet.create<typeof Pet.sayA & typeof Pet.sayB>();
-  t.is(sayMyName(b), 'Hello Rover');
-  t.is(sayMyName(a), 'Hello lizard');
 });
 ```
+
+Here we have created a function that takes as input a number and a boolean or a string and a boolean.  Calling the function with any other parameter types as input will throw a runtime error.
+
+### `typed-function` with TypeScript
+
+Doing the same in TypeScript is similar:
+
+```ts
+import { default as typed } from 'typed-function';
+
+const fn = typed({
+  'number, boolean'(a: number, b: boolean) {
+    return `a is the number ${a}, b is ${b.toString().toUpperCase()}`;
+  },
+  'string, boolean'(a: string, b: boolean) {
+    return `a is "${a}", b is ${b.toString().toUpperCase()}`;
+  }
+});
+```
+
+The resulting function has teh same runtime behavior.  However, we notice two issues:
+
+1) The input parameter types are redundantly defined, once for TypeScript and once for `typed-function`.
+2) The resulting function `fn` has a TypeScript type of `any`, and therefore provides no type safety.
+
+Issue #2 can be solved by typing the resulting function:
+
+```ts
+const signatures = {
+  'number, boolean'(a: number, b: boolean) {
+    return 'a is a number, b is a boolean';
+  },
+  'string, number'(a: string, b: boolean) {
+    return 'a is a string, b is a number';
+  }
+};
+
+const fn: typeof signatures['number, boolean'] & typeof signatures['string, number'] = typed(fnSignatures);
+```
+
+Notice we are first defining the signatures object, then using the types of the these signatures to define the type of the typed-function. This is much better in terms of type safety but adds even more redundancy and not a great developer experience.
+
+### `ts-typed-function`
+
+`ts-typed-function` uses classes and method decorators to improve the developer experience:
+
+```ts
+import { signature, type } from './ts-typed-function';
+
+class Fn extends TypedFunction {
+  @signature()
+  num(a: number, b: boolean) {
+    return `a is the number ${a}, b is the boolean ${b}`;
+  }
+
+  @signature()
+  str(a: string, b: boolean) {
+    return `a is the string ${a}, b is the boolean ${b}`;
+  }
+}
+
+const fn = Fn.create<Fn['num'] & Fn['str']>();
+```
+
+The `@signature` method decorator is able to derive the `typed-function` signatures from the typeScript signature (this only supports basic types, more on this later).  We must still explicitly type the resulting function but we can refer to types by the method name.
+
+### Advanced Usage (TBR)
+
+* Complex types
+* Multiple signature sets per class
+* Type definitions
+* Inheritance (implementation TBD)
+
+License
+
+This project is licensed under the MIT License - see the LICENSE file for details

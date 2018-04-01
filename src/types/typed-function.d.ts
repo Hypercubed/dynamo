@@ -3,7 +3,7 @@ type Signatures = {
 }
 
 interface Create {
-  (name: any, signatures?: Signatures): any;
+  <T>(name: any, signatures?: Signatures): T;
   create: () => Create;
   addType: (type: {name: string, test: Function}) => void;
 }

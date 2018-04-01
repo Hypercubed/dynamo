@@ -4,22 +4,13 @@ import { create } from 'typed-function';
 
 const ANON = '@@anon@@';
 
-export type SignaturesMap = { [key: string]: Signatures }
+export interface SignaturesMap {
+  [key: string]: Signatures;
+}
 
 const signaturesMap = new WeakMap<TypedFunction, SignaturesMap>();
 
 export class TypedFunction {
-  private static _typed = create();
-  private static _signatures: SignaturesMap = {};
-
-  protected static get typed(): Create {
-    if (Object.prototype.hasOwnProperty.call(this, '_typed')) {
-      return this._typed;
-    }
-    // todo: this should inherit existing signatures and types
-    return this._typed = this._typed.create();
-  }
-
   static create<T>(name: string = ANON, signatures?: Signatures): T {
     signatures = signatures || this.signatures(name);
     return name === ANON ?
@@ -37,6 +28,17 @@ export class TypedFunction {
     }
     return this._signatures[name] || {};
   }
+
+  private static _typed = create();
+  private static _signatures: SignaturesMap = {};
+
+  protected static get typed(): Create {
+    if (Object.prototype.hasOwnProperty.call(this, '_typed')) {
+      return this._typed;
+    }
+    // todo: this should inherit existing signatures and types
+    return this._typed = this._typed.create();
+  }
 }
 
 export function type(name?: string) {
@@ -47,7 +49,7 @@ export function type(name?: string) {
       const test = target[propertyKey];
       typed.addType({ name, test });      
     }
-  }
+  };
 }
 
 export function signature(name?: string | string[], paramtypes?: string[]) {
@@ -78,17 +80,17 @@ export function signature(name?: string | string[], paramtypes?: string[]) {
         signaturesMap.set(target, signatures);
       }
     }
-  }
+  };
 }
 
-function normalizeName(x: any) {
-  x = typeof x === 'string' ? x : x.name;
-  switch (x) {
+function normalizeName(x: any): void {
+  const name = typeof x === 'string' ? x : x.name;
+  switch (name) {
     case 'String':
     case 'Number':
     case 'Boolean':
-      return String.prototype.toLowerCase.call(x);
+      return String.prototype.toLowerCase.call(name);
     default:
-      return x;
+      return name;
   }
 }

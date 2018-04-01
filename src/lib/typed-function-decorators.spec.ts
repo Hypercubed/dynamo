@@ -1,4 +1,4 @@
-// tslint:disable:no-expression-statement
+// tslint:disable:no-expression-statement member-ordering
 import { test } from 'ava';
 import { signature, type, TypedFunction } from './typed-function-decorators';
 
@@ -52,7 +52,7 @@ class Math extends TypedFunction {
   }
 
   @signature('double')
-  double_array(a: Array<any>) {
+  double_array(a: any[]) {
     return a.concat(a);
   }
 
@@ -137,7 +137,7 @@ test('can create function directly from the signatures', t => {
 
 test('throws at runtime on bad signature', t => {
   t.throws(() => {
-    math.power(2, '4' as any)
+    math.power(2, '4' as any);
   });
 });
 
@@ -150,8 +150,8 @@ test('compile time check', t => {
   }
 });
 
-
 class WildAnimal extends TypedFunction {
+  // tslint:disable-next-line:no-shadowed-variable
   constructor(public type: string) {
     super();
   }
@@ -197,4 +197,27 @@ test('added types', t => {
   const sayMyName = Pet.create<typeof Pet.sayA & typeof Pet.sayB>();
   t.is(sayMyName(b), 'Hello Rover');
   t.is(sayMyName(a), 'Hello lizard');
+});
+
+test('readme example', t => {
+  class Fn extends TypedFunction {
+    @signature()
+    fn1(a: number, b: boolean) {
+      return `a is the number ${a}, b is ${b.toString().toUpperCase()}`;
+    }
+  
+    @signature()
+    fn2(a: string, b: boolean) {
+      return `a is "${a}", b is ${b.toString().toUpperCase()}`;
+    }
+  }
+  
+  const fn = Fn.create<Fn['fn1'] & Fn['fn2']>();
+
+  t.is(typeof fn, 'function');
+  t.is(fn(15, true), 'a is the number 15, b is TRUE');
+  t.is(fn('hello', false), 'a is "hello", b is FALSE');
+  t.throws(() => {
+    (fn as any)('hello', 'false');
+  });
 });
