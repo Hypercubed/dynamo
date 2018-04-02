@@ -1,4 +1,4 @@
-// tslint:disable:no-expression-statement member-ordering
+// tslint:disable:no-expression-statement member-ordering no-shadowed-variable
 import { test } from 'ava';
 import { signature, type, TypedFunction } from './typed-function-decorators';
 
@@ -492,4 +492,123 @@ test('undefined / null types', t => {
   t.is(fn(15), 30);
   t.is(fn(undefined), 'unknown');
   t.is(fn(null), 'nil');
+});
+
+test('use class in signature', t => {
+  class A {
+    constructor(public value: number) {}
+  }
+
+  class Fn extends TypedFunction {
+    @signature()
+    number(x: number): number { return 2 * (x || 0); }
+
+    @signature([A])
+    a(x: A): number { return 4 * x.value; }
+
+    @type(A)
+    A(arg: any): arg is A {
+      return arg instanceof A;
+    }
+  }
+
+  const fn = Fn.create<Fn['number'] & Fn['a']>();
+
+  t.is(fn(15), 30);
+  t.is(fn(new A(10)), 40);
+});
+
+test('signatures are inherited', t => {
+  class A extends TypedFunction {
+    @signature()
+    number(x: number): string { return `the number ${x}`; }
+  }
+
+  class B extends A {
+    @signature()
+    string(x: string): string { return `the string "${x}"`; }
+  }
+
+  const a = A.create<A['number']>();
+  const b = B.create<B['number'] & B['string']>();
+
+  t.deepEqual(Object.keys((a as any).signatures), [
+    'number',
+  ]);
+
+  t.deepEqual(Object.keys((b as any).signatures), [
+    'number',
+    'string'
+  ]);
+
+  t.is(a(42), 'the number 42');
+  t.throws(() => (a as any)('everything'));
+  t.is(b(42), 'the number 42');
+  t.is(b('everything'), 'the string "everything"');
+});
+
+test.failing('types are inherited', t => {
+  class A extends TypedFunction {
+    @type()
+    decimal(x: any): boolean { return typeof x === 'number'; }
+  }
+
+  class B extends A {
+  }
+
+  const aTypes = (A as any).typed.types;
+  const bTypes = (B as any).typed.types;
+
+  t.is(aTypes[aTypes.length - 1].name, 'decimal');
+  t.is(bTypes[bTypes.length - 1].name, 'decimal');
+});
+
+test('avoids name collision', t => {
+  const fn = (function() {
+    class A {
+      constructor(public value: number) {}
+    }
+
+    class Fn extends TypedFunction {
+      @signature()
+      number(x: number): number { return 2 * (x || 0); }
+  
+      @signature([A])
+      a(x: A): number { return 4 * x.value; }
+  
+      @type(A)
+      A(arg: any): arg is A {
+        return arg instanceof A;
+      }
+    }
+
+    return Fn.create<Fn['number'] & Fn['a']>();
+  }());
+
+  class A {
+    constructor(public value: number) {}
+  }
+
+  const fn2 = (function() {
+    class Fn2 extends TypedFunction {
+      @signature()
+      number(x: number): number { return 2 * (x || 0); }
+  
+      @signature([A])
+      a(x: A): number { return 4 * x.value; }
+  
+      @type(A)
+      A(arg: any): arg is A {
+        return arg instanceof A;
+      }
+    }
+
+    return Fn2.create<Fn2['number'] & Fn2['a']>();
+  }());
+
+  t.is(fn(15), 30);
+  t.throws(() => fn(new A(10))); // why doesn't this fail in TS?
+
+  t.is(fn2(15), 30);
+  t.is(fn2(new A(10)), 40);
 });

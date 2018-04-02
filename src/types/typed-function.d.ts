@@ -1,5 +1,9 @@
-type Signatures = {
+interface Signatures {
   [key: string]: Function;
+}
+
+interface Constructor<T> {
+  new(): T;
 }
 
 interface Create {

@@ -2,18 +2,19 @@ import 'reflect-metadata';
 
 import { create } from 'typed-function';
 
-const ANON = '@@anon@@';
+const ANON = '';
+const METADATA_KEY = 'ts-typed-function:signitures';
 
 export interface SignaturesMap {
   [key: string]: Signatures;
 }
 
-const signaturesMap = new WeakMap<TypedFunction, SignaturesMap>();
+// const signaturesMap = new WeakMap<TypedFunction, SignaturesMap>();
 
 export class TypedFunction {
-  static create<T>(name: string = ANON, signatures?: Signatures): T {
+  static create<T>(name?: string, signatures?: Signatures): T {
     signatures = signatures || this.signatures(name);
-    return name === ANON ?
+    return typeof name === 'undefined' ?
       this.typed(signatures) :
       this.typed(name, signatures);
   }
@@ -21,10 +22,13 @@ export class TypedFunction {
   static signatures(name: string = ANON): Signatures {
     if (!Object.prototype.hasOwnProperty.call(this, '_signatures')) {
       const target = this.prototype;
-      if (signaturesMap.has(target)) {
+      if (Reflect.hasMetadata(METADATA_KEY, target)) {
+        this._signatures = Reflect.getMetadata(METADATA_KEY, target) as SignaturesMap;
+      }
+      /* if (signaturesMap.has(target)) {
         this._signatures = signaturesMap.get(target) as SignaturesMap;
         signaturesMap.delete(target);
-      }
+      } */
     }
     return this._signatures[name] || {};
   }
@@ -36,30 +40,36 @@ export class TypedFunction {
     if (Object.prototype.hasOwnProperty.call(this, '_typed')) {
       return this._typed;
     }
-    // todo: this should inherit existing signatures and types
     return this._typed = this._typed.create();
   }
 }
 
-export function type(name?: string) {
+export interface Constructor {
+  new(...args: any[]): any;
+  [x: string]: any;
+}
+
+export type Type = string | Constructor;
+
+export function type(name?: Type) {
   return function(target: any, propertyKey: string) {
     const typed: Create = target.typed || target.constructor.typed;
     if (typed) {
-      name = name || propertyKey;
+      name = normalizeName(name || propertyKey);
       const test = target[propertyKey];
       typed.addType({ name, test });      
     }
   };
 }
 
-export function signature(name?: string | string[], paramtypes?: string[]) {
+export function signature(name?: string | Type[], paramtypes?: Type[]) {
   if (typeof name !== 'string') {
     paramtypes = name;
     name = ANON;
   }
 
-  if (!paramtypes && typeof Reflect !== 'object') {
-    throw new Error('method signature not defined and reflect-metadata not found');
+  if (typeof Reflect !== 'object') {
+    throw new Error('reflect-metadata not found');
   }
   
   return function(target: any, propertyKey: string) {
@@ -73,11 +83,16 @@ export function signature(name?: string | string[], paramtypes?: string[]) {
           target = target.prototype;
         }
 
-        const signatures = signaturesMap.get(target) || {};
-        signatures[name] = signatures[name] || {};
-        signatures[name][typesKey] = method;
+        const sourceSigs =  Reflect.getMetadata(METADATA_KEY, target) || {};
+        const targetSigs = {
+          ...sourceSigs,
+          [name]: {
+            ...sourceSigs[name],
+            [typesKey]: method
+          }
+        };
 
-        signaturesMap.set(target, signatures);
+        Reflect.defineMetadata(METADATA_KEY, targetSigs, target);
       }
     }
   };
@@ -91,7 +106,11 @@ function normalizeName(x: any): string {
     case 'Number':
     case 'Boolean':
       return String.prototype.toLowerCase.call(x.name);
+    case 'Object':
+    case 'Array':
+    case 'Function':
+      return  x.name;
     default:
-      return x.name;
+      return  x.name;
   }
 }
