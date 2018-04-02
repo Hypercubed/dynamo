@@ -59,7 +59,7 @@ export function signature(name?: string | string[], paramtypes?: string[]) {
   }
 
   if (!paramtypes && typeof Reflect !== 'object') {
-    throw new Error('reflect-metadata not found');
+    throw new Error('method signature not defined and reflect-metadata not found');
   }
   
   return function(target: any, propertyKey: string) {
@@ -83,14 +83,15 @@ export function signature(name?: string | string[], paramtypes?: string[]) {
   };
 }
 
-function normalizeName(x: any): void {
-  const name = typeof x === 'string' ? x : x.name;
-  switch (name) {
+function normalizeName(x: any): string {
+  if (typeof x === 'string') return x;
+  if (x === null || x === undefined || typeof x.name !== 'string') return String(x);
+  switch (x.name) {
     case 'String':
     case 'Number':
     case 'Boolean':
-      return String.prototype.toLowerCase.call(name);
+      return String.prototype.toLowerCase.call(x.name);
     default:
-      return name;
+      return x.name;
   }
 }

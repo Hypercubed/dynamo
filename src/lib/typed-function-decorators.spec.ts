@@ -356,44 +356,55 @@ test('all types', t => {
 
   class Fn extends TypedFunction {
     @signature()
-    i(a: number): any { return a; }
+    number(a: number): any { return a; }
 
     @signature()
-    j(a: string): any { return a; }
+    string(a: string): any { return a; }
 
     @signature()
-    k(a: boolean): any { return a; }
+    boolean(a: boolean): any { return a; }
 
     @signature()
-    a(a: any): any { return a; }
+    any(a: any): any { return a; }
 
     @signature()
-    b(a: any[]): any { return a; }
+    array(a: any[]): any { return a; }
 
     @signature()
-    c(a: D): any { return a; }
+    d(a: D): any { return a; }
 
     @signature()
-    d(a: () => any): any { return a; }
+    function(a: () => any): any { return a; }
 
     @signature()
-    e(a: A): any { return a; }
+    a(a: A): any { return a; }
 
     @signature()
-    f(a: Date): any { return a; }
+    date(a: Date): any { return a; }
 
     @signature()
-    g(a: RegExp): any { return a; }
+    regexp(a: RegExp): any { return a; }
+
+    @signature()
+    undef(a: undefined): any { return a; }
 
     @type('A')
     isA(a: any): boolean { return a instanceof A; }
 
-    @signature('y', ['number | string'])
-    h(a: number | string): any { return a; }
+    @signature('union', ['number | string'])
+    union(a: number | string): any { return a; }
+
+    @signature('constant')
+    constant(a: 'Constant'): any { return a; }
+
+    @signature('nullable')
+    nullable(a?: any): any { return a; }
   }
 
   const x = Fn.create();
-  const y = Fn.create('y');
+  const union = Fn.create('union');
+  const constant = Fn.create('constant');
+  const nullable = Fn.create('nullable');
 
   t.deepEqual(Object.keys((x as any).signatures), [
     'number',
@@ -404,12 +415,21 @@ test('all types', t => {
     'Date',
     'RegExp',
     'Object',
+    'undefined',
     'A'
   ]);
 
-  t.deepEqual(Object.keys((y as any).signatures), [
+  t.deepEqual(Object.keys((union as any).signatures), [
     'number',
     'string'
+  ]);
+
+  t.deepEqual(Object.keys((constant as any).signatures), [
+    'string'
+  ]);
+
+  t.deepEqual(Object.keys((nullable as any).signatures), [
+    'Object'
   ]);
 });
 
@@ -453,4 +473,23 @@ test('instance', t => {
   t.is(f.eat(new Fish('Nemo')), 'No way, I won\'t eat Nemo');
 
   t.is(f.eat.name, '');
+});
+
+test('undefined / null types', t => {
+  class Fn extends TypedFunction {
+    @signature()
+    number(a?: number): any { return 2 * (a || 0); }
+
+    @signature()
+    unknown(_: undefined): any { return 'unknown'; }
+
+    @signature(['null'])
+    nil(_: null): any { return 'nil'; }
+  }
+
+  const fn = Fn.create<Fn['number'] & Fn['unknown'] & Fn['nil']>();
+
+  t.is(fn(15), 30);
+  t.is(fn(undefined), 'unknown');
+  t.is(fn(null), 'nil');
 });

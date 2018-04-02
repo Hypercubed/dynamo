@@ -190,7 +190,7 @@ Notice also that the `repeat` method on the `Fn` class is used to generate two d
 
 ### Explicit typing
 
-This library uses metadata reflections to infer types in the type signatures.  Since TypeScript only supports [basic type serialization](http://blog.wolksoftware.com/decorators-metadata-reflection-in-typescript-from-novice-to-expert-part-4#3-basic-type-serialization_1) only basic types can be inferred.  These basic types are `number`, `string`, `boolean`, `Array`, `Function`, `Date`, and `RegExp`.  Other types (including `any` and union types) are treated as `Object` for `typed-function`.  To support more complex types the input parameter signatures must be supplied to the `signature` decorator as a array of strings.
+This library uses metadata reflections to infer types in the type signatures.  Since TypeScript only supports [basic type serialization](http://blog.wolksoftware.com/decorators-metadata-reflection-in-typescript-from-novice-to-expert-part-4#3-basic-type-serialization_1) only basic types can be inferred.  These basic types are `number`, `string`, `boolean`, `undefined`, `Array`, `Function`, `Date`, and `RegExp`.  Other types (including `any` and union types) are treated as `Object` for `typed-function`.  To support more complex types the input parameter signatures must be supplied to the `signature` decorator as a array of strings.
 
 ```ts
 class Fn extends TypedFunction {
@@ -289,6 +289,8 @@ console.log(f.eat(new Fish('Nemo')));      // outputs 'No way, I won't eat Nemo'
 
 # Future (implementation TBD)
 
+* Auto-add `instanceof` types
+* Optional parameters
 * Type conversions
 * Inheritance
 
