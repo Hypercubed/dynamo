@@ -5,30 +5,20 @@ import { create } from 'typed-function';
 const ANON = '';
 const METADATA_KEY = 'ts-typed-function:signitures';
 
-export interface SignaturesMap {
-  [key: string]: Signatures;
-}
-
-// const signaturesMap = new WeakMap<TypedFunction, SignaturesMap>();
-
 export class TypedFunction {
-  static create<T>(name?: string, signatures?: Signatures): T {
+  static create<T>(name?: string, signatures?: TypedSignatures): T {
     signatures = signatures || this.signatures(name);
     return typeof name === 'undefined' ?
       this.typed(signatures) :
       this.typed(name, signatures);
   }
 
-  static signatures(name: string = ANON): Signatures {
+  static signatures(name: string = ANON): TypedSignatures {
     if (!Object.prototype.hasOwnProperty.call(this, '_signatures')) {
       const target = this.prototype;
       if (Reflect.hasMetadata(METADATA_KEY, target)) {
         this._signatures = Reflect.getMetadata(METADATA_KEY, target) as SignaturesMap;
       }
-      /* if (signaturesMap.has(target)) {
-        this._signatures = signaturesMap.get(target) as SignaturesMap;
-        signaturesMap.delete(target);
-      } */
     }
     return this._signatures[name] || {};
   }
@@ -43,13 +33,6 @@ export class TypedFunction {
     return this._typed = this._typed.create();
   }
 }
-
-export interface Constructor {
-  new(...args: any[]): any;
-  [x: string]: any;
-}
-
-export type Type = string | Constructor;
 
 export function type(name?: Type) {
   return function(target: any, propertyKey: string) {
@@ -73,11 +56,24 @@ export function signature(name?: string | Type[], paramtypes?: Type[]) {
   }
   
   return function(target: any, propertyKey: string) {
+    const typed: Create = target.typed || target.constructor.typed;
+    const existingTypes = typed.types.map((t: any) => t.name);
     const method = target[propertyKey];
     if (typeof method === 'function' && typeof name === 'string') {
       paramtypes = paramtypes || Reflect.getMetadata('design:paramtypes', target, propertyKey);
       if (paramtypes && Array.isArray(paramtypes)) {
-        const typesKey = paramtypes.map(normalizeName).join(',');
+        const typesKey = paramtypes.map((p) => {
+          const n = normalizeName(p);
+          if (
+            !existingTypes.includes(n) &&
+            typeof p === 'function'
+            && n[0] === 'i'
+            && n[1] === 's'
+          ) {
+            typed.addType({ name: n, test: (x: any): x is typeof p => x instanceof p }); 
+          }
+          return n;
+        }).join(',');
 
         if (target.prototype !== undefined) {
           target = target.prototype;
@@ -109,8 +105,10 @@ function normalizeName(x: any): string {
     case 'Object':
     case 'Array':
     case 'Function':
+    case 'RegExp':
+    case 'Date':
       return  x.name;
     default:
-      return  x.name;
+      return  'is' + x.name;
   }
 }

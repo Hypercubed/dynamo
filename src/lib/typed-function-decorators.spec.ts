@@ -162,6 +162,19 @@ class Pet extends WildAnimal {
     super('pet');
   }
 
+  // type definitions should happend before signature
+  // by default use the property name as the type name (is{ConstructorName})
+  @type()
+  static isPet(x: any): x is Pet {
+    return x && x instanceof Pet;
+  }
+
+  // here we specify the type explicity
+  @type(WildAnimal)
+  static isWild(x: any): x is WildAnimal {
+    return x && x instanceof WildAnimal && !(x instanceof Pet);
+  }
+
   @signature()
   static sayA(x: WildAnimal) {
     return `Hello ${x.type}`;
@@ -170,19 +183,6 @@ class Pet extends WildAnimal {
   @signature()
   static sayB(x: Pet) {
     return `Hello ${x.name}`;
-  }
-
-  // type definitions
-  // by default use the property name as the type name
-  @type()
-  static WildAnimal(x: any): x is WildAnimal {
-    return x && x instanceof WildAnimal && !(x instanceof Pet);
-  }
-
-  // here we specify the type name
-  @type('Pet')
-  static isPet(x: any): x is Pet {
-    return x && x instanceof Pet;
   }
 }
 
@@ -197,6 +197,47 @@ test('added types', t => {
   const sayMyName = Pet.create<typeof Pet.sayA & typeof Pet.sayB>();
   t.is(sayMyName(b), 'Hello Rover');
   t.is(sayMyName(a), 'Hello lizard');
+});
+
+test('readme implicit construictor type', t => {
+  class Fish {
+    constructor(public name: string) {}
+  }
+  
+  class Fn extends TypedFunction {
+    @signature()
+    name(x: Fish): string { return x.name; }
+  }
+  
+  const fn = Fn.create<Fn['name']>();
+
+  t.is(typeof fn, 'function');
+  t.is(fn(new Fish('Wanda')), 'Wanda');
+});
+
+test('readme explicit construictor type', t => {
+  class Pet {
+    constructor(public type: string, public name: string) {}
+  }
+
+  interface Fish extends Pet {
+    type: 'fish';
+  }
+  
+  class Fn extends TypedFunction {
+    @type('Fish')
+    isFish(arg: Pet): arg is Fish {
+      return arg instanceof Pet && arg.type === 'fish';
+    }
+
+    @signature(['Fish'])
+    name(x: Pet): string { return `A fish named ${x.name}`; }
+  }
+  
+  const fn = Fn.create<Fn['name']>();
+
+  t.is(typeof fn, 'function');
+  t.is(fn(new Pet('fish', 'Wanda')), 'A fish named Wanda');
 });
 
 test('readme basic example', t => {
@@ -218,11 +259,6 @@ test('readme basic example', t => {
     @signature()
     fish(a: Fish) {
       return `a is a fish named ${a.name}`;
-    }
-  
-    @type('Fish')
-    isFish(a: any): a is Fish {
-      return a instanceof Fish;
     }
   }
   
@@ -324,7 +360,7 @@ test('explicit types', t => {
     @signature()
     val(a: A): any { return a.valueOf(); }
 
-    @type()
+    @type(A)
     A(a: any): a is A {
       return a instanceof A;
     }
@@ -338,7 +374,7 @@ test('explicit types', t => {
   t.deepEqual(Object.keys((fn as any).signatures), [
     'number',
     'string',
-    'A'
+    'isA'
   ]);
 });
 
@@ -388,9 +424,6 @@ test('all types', t => {
     @signature()
     undef(a: undefined): any { return a; }
 
-    @type('A')
-    isA(a: any): boolean { return a instanceof A; }
-
     @signature('union', ['number | string'])
     union(a: number | string): any { return a; }
 
@@ -416,7 +449,7 @@ test('all types', t => {
     'RegExp',
     'Object',
     'undefined',
-    'A'
+    'isA'
   ]);
 
   t.deepEqual(Object.keys((union as any).signatures), [
@@ -451,16 +484,6 @@ test('instance', t => {
     @signature()
     protected eatFish(a: Fish): string {
       return `No way, I won't eat ${a.name}`;
-    }
-
-    @type('Fish')
-    static isFish(a: any): a is Fish {
-      return a instanceof Fish;
-    }
-
-    @type('FishFood')
-    protected isFishFood(a: any): a is FishFood {
-      return a instanceof FishFood;
     }
 
     eat = Fish.create<Fish['eatFood'] & Fish['eatFish']>(); 

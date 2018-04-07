@@ -16,7 +16,8 @@ Typed-functions in TS using decorators
 
 `ts-typed-function` adds the following:
 
-* Input arguments inferred from TypeScript types
+* Input arguments inferred from TypeScript types.
+* Type tests for classes inferred
 * Appropriate type signatures for typed functions.
 
 ## TLDR Usage
@@ -40,11 +41,6 @@ class Fn extends TypedFunction {
   @signature()
   fish(a: Fish) {
     return `a is a fish named ${a.name}`;
-  }
-
-  @type('Fish')
-  isFish(a: any): a is Fish {
-    return a instanceof Fish;
   }
 }
 
@@ -73,13 +69,20 @@ catch (err) {
 ```js
 const typed = require('typed-function');
 
+typed.addType('Fish', function(a) {
+  return a instanceof Fish;
+});
+
 // create a typed function
 const fn = typed({
   'number, boolean': function (a, b) {
     return `a is the number ${a}, b is ${b.toString().toUpperCase()}`;
   },
-  'string, boolean': function (a, b) {
-    return `a is "${a}", b is ${b.toString().toUpperCase()}`;
+  'string': function (a, b) {
+    return `a is "${a}"`;
+  },
+  'Fish': function (a) {
+    return `a is a fish named ${a.name}`;
   }
 });
 ```
@@ -93,12 +96,19 @@ Doing the same in TypeScript is similar:
 ```ts
 import { default as typed } from 'typed-function';
 
+typed.addType('Fish', function(a: any): a is Fish {
+  return a instanceof Fish;
+});
+
 const fn = typed({
-  'number, boolean'(a: number, b: boolean) {
+  'number, boolean': function (a: number, b: boolean) {
     return `a is the number ${a}, b is ${b.toString().toUpperCase()}`;
   },
-  'string, boolean'(a: string, b: boolean) {
-    return `a is "${a}", b is ${b.toString().toUpperCase()}`;
+  'string': function (a: string, b: boolean) {
+    return `a is "${a}"`;
+  },
+  'Fish': function (a: Fish) {
+    return `a is a fish named ${a.name}`;
   }
 });
 ```
@@ -107,20 +117,24 @@ The resulting function has the same runtime behavior.  However, we notice two is
 
 1) The input parameter types are redundantly defined, once for TypeScript and once for `typed-function`.
 2) The resulting function `fn` has a TypeScript type of `any`, and therefore provides no type safety.
+3) We must explicitly add the obvious type check of `instanceof Fish`.
 
 Issue #2 can be solved by typing the resulting function:
 
 ```ts
 const signatures = {
-  'number, boolean'(a: number, b: boolean) {
+  'number, boolean': function (a: number, b: boolean) {
     return 'a is a number, b is a boolean';
   },
-  'string, number'(a: string, b: boolean) {
+  'string': function (a: string, b: boolean) {
     return 'a is a string, b is a number';
+  },
+  'Fish': function (a: Fish) {
+    return `a is a fish named ${a.name}`;
   }
 };
 
-const fn: typeof signatures['number, boolean'] & typeof signatures['string, number'] = typed(fnSignatures);
+const fn: typeof signatures['number, boolean'] & typeof signatures['string'] & typeof signatures['Fish'] = typed(fnSignatures);
 ```
 
 Notice we are first defining the signatures object, then using the types of the these signatures to define the type of the typed-function. This is much better in terms of type safety but adds even more redundancy and not a great developer experience.
@@ -139,19 +153,24 @@ class Fn extends TypedFunction {
   }
 
   @signature()
-  str(a: string, b: boolean) {
-    return `a is the string ${a}, b is the boolean ${b}`;
+  str(a: string) {
+    return `a is the string ${a}`;
+  }
+
+  @signature()
+  fish(a: Fish) {
+    return `a is a fish named ${a.name}`;
   }
 }
 
-const fn = Fn.create<Fn['num'] & Fn['str']>();
+const fn = Fn.create<Fn['num'] & Fn['str'] & Fn['fish']>();
 ```
 
-The `@signature` method decorator is able to derive the `typed-function` signatures from the TypeScript signature (this only supports basic types, more on this later).  We must still explicitly type the resulting function but we can refer to types by the method name.
+The `@signature` method decorator is able to derive the `typed-function` signatures from the TypeScript signature (this only supports basic types, more on this later).  We must still explicitly type the resulting function but we can refer to types by the method name.  Also notice that the `@signature()` decorator implicitly adds the `instanceof` type check for the `Fish` constructor.
 
 ### Named functions
 
-In the example above, the resulting typed function is unnamed.  Multiple named functions can be created from a single `TypedFunction` class by passing a name to both the `signature` decorator and the `create` method.
+In the example above, the resulting typed function is unnamed.  Multiple named functions can be created from a single `TypedFunction` class by passing a name to both the `signature` decorator and the `create` method.  These sets share type definitions.
 
 ```ts
 class Fn extends TypedFunction {
@@ -190,7 +209,7 @@ Notice also that the `repeat` method on the `Fn` class is used to generate two d
 
 ### Explicit typing
 
-This library uses metadata reflections to infer types in the type signatures.  Since TypeScript only supports [basic type serialization](http://blog.wolksoftware.com/decorators-metadata-reflection-in-typescript-from-novice-to-expert-part-4#3-basic-type-serialization_1) only basic types can be inferred.  These basic types are `number`, `string`, `boolean`, `undefined`, `Array`, `Function`, `Date`, and `RegExp`.  Other types (including `any` and union types) are treated as `Object` for `typed-function`.  To support more complex types the input parameter signatures must be supplied to the `signature` decorator as a array of strings.
+This library uses metadata reflections to infer types in the type signatures.  Since TypeScript only supports [basic type serialization](http://blog.wolksoftware.com/decorators-metadata-reflection-in-typescript-from-novice-to-expert-part-4#3-basic-type-serialization_1) only basic types can be inferred.  These basic types are `number`, `string`, `boolean`, `undefined`, `Array`, `Function`, `Date`, and `RegExp`.  Types that are also class constructors are supported automatically.  Other types (including `any` and union types) are treated as `Object` for `typed-function`.  To support more complex types the input parameter signatures must be supplied to the `signature` decorator as a array of strings.
 
 ```ts
 class Fn extends TypedFunction {
@@ -224,21 +243,40 @@ Notice that as per typeScript requirements the implementation must be generic, t
 
 ### Defining new types
 
-For additional types use the `@type` method decorator.  The `type` decorator accepts a single string as input.  This string will be the name of the new type for `typed-function` signatures, if no input is provided the method name is assumed to be the type name.  The method itself should be a TypeScript [user-defined type guard](http://www.typescriptlang.org/docs/handbook/advanced-types.html#user-defined-type-guards).
+If the `signature` decorator encounters a class it will automatically add an `instanceof` test for that type.  For example this just works:
 
 ```ts
 class Fish {
-  constructor(public name: number) {}
+  constructor(public name: string) {}
 }
 
 class Fn extends TypedFunction {
   @signature()
   name(x: Fish): string { return x.name; }
+}
 
+const fn = Fn.create<Fn['name']>();
+```
+
+For additional types use the `@type` method decorator.  The `type` decorator accepts a single string (or class constructor) as input.  This string will be the name of the new type for `typed-function` signatures, if no input is provided the method name is assumed to be the type name.  The method itself should be a TypeScript [user-defined type guard](http://www.typescriptlang.org/docs/handbook/advanced-types.html#user-defined-type-guards).
+
+```ts
+class Pet {
+  constructor(public type: string, public name: string) {}
+}
+
+interface Fish extends Pet {
+  type: 'fish'
+}
+
+class Fn extends TypedFunction {
   @type('Fish')
-  isFish(arg as any): arg is Fish {
-    return arg instanceof Fish;
+  isFish(arg: Pet): arg is Fish {
+    return arg instanceof Pet && arg.type === 'fish';
   }
+
+  @signature(['Fish'])
+  name(x: Pet): string { return `A fish named ${x.name}`; }
 }
 
 const fn = Fn.create<Fn['name']>();
@@ -246,7 +284,7 @@ const fn = Fn.create<Fn['name']>();
 
 ### Instance methods
 
-So far we have used classes only to define the types and signatures.  However, the `type` and `signature` decorators also work on static, private and protected methods and the typed-function itself could be an instance method on a class.
+So far we have used class instance methods only to define the types and signatures.  However, the `type` and `signature` decorators also work on static, private and protected methods and the typed-function itself could be an instance method on a class.
 
 ```ts
 class FishFood {
@@ -259,23 +297,13 @@ class Fish extends TypedFunction {
   }
 
   @signature()
-  protected eatFood(a: FishFood) {
+  protected eatFood(a: FishFood): string {
     return `Yum, ${a.name}!`;
   }
 
   @signature()
-  protected eatFish(a: Fish) {
+  protected eatFish(a: Fish): string {
     return `No way, I won't eat ${a.name}`;
-  }
-
-  @type('Fish')
-  static isFish(a: any): a is Fish {
-    return a instanceof Fish;
-  }
-
-  @type('FishFood')
-  private isFishFood(a: any): a is FishFood {
-    return a instanceof FishFood;
   }
 
   eat = Fish.create<Fish['eatFood'] & Fish['eatFish']>(); 
@@ -289,7 +317,6 @@ console.log(f.eat(new Fish('Nemo')));      // outputs 'No way, I won't eat Nemo'
 
 # Future (implementation TBD)
 
-* Auto-add `instanceof` types
 * Optional parameters
 * Type conversions
 * Inheritance
