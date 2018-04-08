@@ -325,30 +325,31 @@ Signatures and types are inherited:
 
 ```ts
 interface Decimal {
-  value: number;
+  $decimal: string;
 }
 
-class A extends TypedFunction {
-  @type()
-  isDecimal(x: any): x is Decimal { return x && typeof x.value === 'number'; }
+class InspectDecimal extends TypedFunction {
+  @type('Decimal')
+  isDecimal(x: any): x is Decimal {
+    return x && typeof x['$decimal'] === 'string';
+  }
 
-  @signature()
-  decimal(x: Decimal): string { return `a decimal ${x.value}`; }
+  @signature(['Decimal'])
+  decimal(x: Decimal): string { return `the decimal ${x.$decimal}`; }
+}
 
+class Inspect extends InspectDecimal {
   @signature()
   number(x: number): string { return `the number ${x}`; }
 }
 
-class B extends A {
-  @signature()
-  string(x: string): string { return `the string "${x}"`; }
-}
+const inspect = Inspect.create<
+  Inspect['number'] &
+  Inspect['decimal']
+>();
 
-const b = B.create<B['decimal'] & B['number'] & B['string']>();
-
-console.log(b(42))            // outputs 'the number 42'
-console.log(b({value: 42}))   // outputs 'a decimal 42'
-console.log(b('everything'))  // outputs 'the string "everything"'
+console.log(inspect(42));            // outputs 'the number 42'
+console.log(inspect({ $decimal: '42' }));   // outputs 'the decimal 42'
 ```
 
 # Future (implementation TBD)

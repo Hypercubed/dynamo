@@ -37,10 +37,10 @@ test('types are inherited', t => {
   }
 
   class A extends TypedFunction {
-    @type()
+    @type('Decimal')
     isDecimal(x: any): x is Decimal { return x && typeof x.value === 'number'; }
 
-    @signature()
+    @signature(['Decimal'])
     decimal(x: Decimal): string { return `the decimal ${x.value}`; }
 
     @signature()
@@ -60,8 +60,8 @@ test('types are inherited', t => {
   const bTypes = (B as any).typed.types;
   const cTypes = (C as any).typed.types;
 
-  t.is(aTypes[aTypes.length - 1].name, 'isDecimal');
-  t.is(bTypes[bTypes.length - 1].name, 'isDecimal');
+  t.is(aTypes[aTypes.length - 1].name, 'Decimal');
+  t.is(bTypes[bTypes.length - 1].name, 'Decimal');
   t.is(cTypes[cTypes.length - 1].name, 'undefined');
 
   const a = A.create<A['decimal'] & A['number']>();
