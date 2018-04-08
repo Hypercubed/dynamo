@@ -30,7 +30,9 @@ export class TypedFunction {
     if (Object.prototype.hasOwnProperty.call(this, '_typed')) {
       return this._typed;
     }
-    return this._typed = this._typed.create();
+    const t = this._typed.create();
+    t.types = [...this._typed.types];
+    return this._typed = t;
   }
 }
 

@@ -315,6 +315,31 @@ console.log(f.eat(new FishFood('worms'))); // outputs 'Yum, worms!'
 console.log(f.eat(new Fish('Nemo')));      // outputs 'No way, I won't eat Nemo'
 ```
 
+### Inheritance
+
+Signatures and types are inherited:
+
+```ts
+class A extends TypedFunction {
+  @signature()
+  decimal(x: Decimal): string { return `a decimal ${x.value}`; }
+
+  @signature()
+  number(x: number): string { return `the number ${x}`; }
+}
+
+class B extends A {
+  @signature()
+  string(x: string): string { return `the string "${x}"`; }
+}
+
+const b = B.create<B['decimal'] & B['number'] & B['string']>();
+
+console.log(b(42))            // outputs 'the number 42'
+console.log(b({value: 42}))   // outputs 'a decimal 42'
+console.log(b('everything'))  // outputs 'the string "everything"'
+```
+
 # Future (implementation TBD)
 
 * Optional parameters
