@@ -152,7 +152,7 @@ test('ts override example', t => {
   t.is(double('boo'), 'booboo');
 });
 
-test('inherit', t => {
+test('inherit, interface', t => {
   interface Decimal {
     $decimal: string;
   }
@@ -180,3 +180,31 @@ test('inherit', t => {
   t.is(inspect(42), 'the number 42');
   t.is(inspect({ $decimal: '42' }), 'the decimal 42');
 });
+
+test('inherit, class', t => {
+
+  class Decimal {
+    constructor(public $decimal: string) {}
+  }
+
+  class InspectDecimal extends TypedFunction {
+    @signature()
+    decimal(x: Decimal): string { return `the decimal ${x.$decimal}`; }
+  }
+  
+  class Inspect extends InspectDecimal {
+    @signature()
+    number(x: number): string { return `the number ${x}`; }
+  }
+  
+  const inspect = Inspect.create<
+    Inspect['number'] &
+    Inspect['decimal']
+  >();
+
+  inspect(new Decimal('42'))
+
+  t.is(inspect(42), 'the number 42');
+  t.is(inspect(new Decimal('42')), 'the decimal 42');
+});
+

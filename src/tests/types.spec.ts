@@ -242,3 +242,29 @@ test('use class in signature', t => {
   t.is(fn(15), 30);
   t.is(fn(new A(10)), 40);
 });
+
+test('simple class', t => {
+  class Decimal {
+    constructor(public $decimal: string) {}
+  }
+
+  class Inspect extends TypedFunction {
+    @signature()
+    protected decimal(x: Decimal): string { return `the decimal ${x.$decimal}`; }
+
+    @signature()
+    protected number(x: number): string { return `the number ${x}`; }
+
+    inspect =  Inspect.create<
+      Inspect['number'] &
+      Inspect['decimal']
+    >();
+  }
+
+  const { inspect } = new Inspect();
+
+  inspect(new Decimal('42'));
+
+  t.is(inspect(42), 'the number 42');
+  t.is(inspect(new Decimal('42')), 'the decimal 42');
+});
