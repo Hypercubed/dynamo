@@ -2,10 +2,19 @@ import 'reflect-metadata';
 
 import * as typedFunction from 'typed-function';
 
-const METADATA_KEY = 'ts-typed-function:signitures';
+const META_KEY = 'ts-typed-function:params';
 
-type Constructor = new(...args: any[]) => any;
+interface Constructor {
+  prototype: any;
+  new(...args: any[]);
+}
+
+type AnyFunction = (...args: any[]) => any;
 type ParamType = string | Constructor;
+
+interface SignatureMap {
+  [key: string]: AnyFunction;
+}
 
 interface Type {
   name: string;
@@ -18,32 +27,37 @@ interface Conversion<T, U> {
   convert: (x: T) => U;
 }
 
-export function signature(paramtypes?: ParamType[]) {
+export function signature(paramtypes?: ParamType[], returntype?: ParamType) {
   if (typeof Reflect !== 'object') {
     throw new Error('reflect-metadata not found');
   }
   
-  return function(target: any, propertyKey: string) {
-    const method = target[propertyKey];
+  return function(target: any, key: string) {
+    const method = target[key];
     
     if (typeof method === 'function') {
-      paramtypes = paramtypes || Reflect.getMetadata('design:paramtypes', target, propertyKey);
-      if (paramtypes && Array.isArray(paramtypes)) {
-        method.signature = paramtypes.map(normalizeName).join(',');
+      paramtypes = paramtypes || Reflect.getMetadata('design:paramtypes', target, key) || [];
+      returntype = returntype || Reflect.getMetadata('design:returntype', target, key) || '';
 
-        const sourceSigs =  Reflect.getMetadata(METADATA_KEY, target) || {};
-        const targetSigs = {
-          ...sourceSigs,
-          [method.signature]: propertyKey
-        };
+      const parameterTypes = paramtypes.map(normalizeName).join(',');
+      const returnType = normalizeName(returntype);
 
-        Reflect.defineMetadata(METADATA_KEY, targetSigs, target);
-      }
+      const meta = Reflect.getMetadata(META_KEY, target) || [];
+
+      const data = {
+        key,
+        parameterTypes,
+        returnType
+      };
+
+      Reflect.defineMetadata(META_KEY, [...meta, data], target);
     }
   };
 }
 
+type FunctionKeys<T> = { [K in keyof T]: T[K] extends AnyFunction ? K : never }[keyof T];
 type Intersection<U> = (U extends any ? (k: U) => void : never) extends ((k: infer I) => void) ? I : never;
+type FunctionProperties<T> = Intersection<T[FunctionKeys<T>]>;
 
 function normalizeName(x: any): string {
   if (typeof x === 'string') return x;
@@ -59,7 +73,7 @@ function normalizeName(x: any): string {
 }
 
 export class Typed {
-  constructor(private _typed = typedFunction.create()) {
+  constructor(public _typed = typedFunction.create()) {
   }
 
   create() {
@@ -70,32 +84,34 @@ export class Typed {
     this._typed.addType(type);
   }
 
-  addConversion<T, U>(conversion: Conversion<T, U>) {
-    this._typed.addConversion(conversion);
+  addConversion(ctor: Constructor) {
+    const target = new ctor();
+    const arr = Reflect.getMetadata(META_KEY, target) || [];
+    arr.forEach(({ key, parameterTypes, returnType }) => {
+      this._typed.addConversion({
+        from: parameterTypes,
+        to: returnType,
+        convert: target[key]
+      });
+    });
   }
 
-  fromMap<T extends any>(name: string, map: T): Intersection<T[keyof T]> {
-    if (name) {
-      return this._typed(name, map);
-    }
-    return this._typed(map);
-  }
+  function<T extends Constructor>(ctor: T): FunctionProperties<InstanceType<T>> {
+    const target = new ctor();
+    const name = target.name || ctor.name;
+  
+    const arr = Reflect.getMetadata(META_KEY, target);
 
-  fromClass<T extends any>(ctor: T) {
-    const name = ctor.typedName || ctor.name;
-    const target = ctor.prototype;
-  
-    const map = Reflect.getMetadata(METADATA_KEY, target);
-  
     let maxLength = 0;
-    const sigMap = {};
-    for (const sig in map) {
-      const prop = map[sig];
-      sigMap[sig] = target[prop];
-      maxLength = Math.max(maxLength, target[prop].length);
-    }
+    const sigMap: any = {};
+    arr.forEach(({ key, parameterTypes }) => {
+      sigMap[parameterTypes] = target[key];
+      maxLength = Math.max(maxLength, target[key].length);
+    });
   
-    const fn = this.fromMap<T['prototype']>(name, sigMap);
+    const fn = this._typed(name, sigMap);
+
+    // see https://github.com/josdejong/typed-function/issues/13
     Object.defineProperty(fn, 'length', { value: maxLength });
     return fn;
   }

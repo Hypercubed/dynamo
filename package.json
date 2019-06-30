@@ -49,7 +49,7 @@
   "dependencies": {
     "@types/node": "^9.6.1",
     "reflect-metadata": "^0.1.12",
-    "typed-function": "^1.1.0"
+    "typed-function": "^0.10.7"
   },
   "devDependencies": {
     "ava": "^2.1.0",

@@ -1,4 +1,3 @@
-// tslint:disable:no-expression-statement member-ordering no-shadowed-variable
 import test from 'ava';
 import { signature, Typed } from '../src/lib/typed-function';
 
@@ -16,23 +15,6 @@ typed.addType({
   name: 'Fish',
   test: Fish.isFish
 });
-
-class Fn {
-  @signature()
-  num(a: number, b: boolean) {
-    return `a is the number ${a}, b is ${b.toString().toUpperCase()}`;
-  }
-
-  @signature()
-  str(a: string) {
-    return `a is "${a}"`;
-  }
-
-  @signature()
-  fish(a: Fish) {
-    return `a is a fish named ${a.name}`;
-  }
-}
 
 test('implicit type', t => {
   class Fn {
@@ -52,7 +34,7 @@ test('implicit type', t => {
     }
   }
   
-  const fn = typed.fromClass(Fn);
+  const fn = typed.function(Fn);
 
   t.is(typeof fn, 'function');
   t.is(fn(15, true), 'a is the number 15, b is TRUE');
@@ -90,7 +72,7 @@ test('explicit type, string', t => {
     }
   }
   
-  const fn = typed.fromClass(Fn);
+  const fn = typed.function(Fn);
 
   t.is(typeof fn, 'function');
   t.is(fn(15, true), 'a is the number 15, b is TRUE');
@@ -128,7 +110,7 @@ test('explicit type, class', t => {
     }
   }
   
-  const fn = typed.fromClass(Fn);
+  const fn = typed.function(Fn);
 
   t.is(typeof fn, 'function');
   t.is(fn(15, true), 'a is the number 15, b is TRUE');

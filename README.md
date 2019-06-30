@@ -28,7 +28,7 @@ Typed-functions in TS using decorators
 import { signature, typed } from './ts-typed-function';
 
 class Print {
-  static typedName: 'print';
+  name: 'print';
 
   @signature()
   num(a: number, b: boolean) {
@@ -46,7 +46,7 @@ class Print {
   }
 }
 
-const print = typed.fromClass(Print);
+const print = typed.function(Print);
 
 // use the functions
 console.log(fn(42, true));            // outputs 'a is the number 42, b is TRUE'
@@ -180,7 +180,7 @@ class Print {
   }
 }
 
-const print = typed.fromClass(Print);
+const print = typed.function(Print);
 ```
 
 The create method is able to derive the `typed-function` signatures from the TypeScript signature (this only supports basic types, more on this later).
@@ -195,7 +195,7 @@ class Fn {
   num(a: number | string): any { return +a; }
 }
 
-const double = typed.fromClass(Fn);
+const double = typed.function(Fn);
 ```
 
 ### TypeScript function overloads
@@ -214,7 +214,7 @@ class Fn {
   }
 }
 
-const double = typed.fromClass(Fn);
+const double = typed.function(Fn);
 ```
 
 Notice that as per typeScript requirements the implementation must be generic, therefore, the signatures will require a type as shown.
@@ -238,7 +238,7 @@ class Inspect extends InspectDecimal {
   number(x: number): string { return `the number ${x}`; }
 }
 
-const inspect = typed.fromClass(Inspect);
+const inspect = typed.function(Inspect);
 
 console.log(inspect(42));            // outputs 'the number 42'
 console.log(inspect({ $decimal: '42' }));   // outputs 'the decimal 42'
