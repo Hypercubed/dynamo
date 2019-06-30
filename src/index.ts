@@ -1,1 +1,1 @@
-export * from './lib/typed-function-decorators';
+export * from './lib/typed-function';
