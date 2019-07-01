@@ -4,7 +4,7 @@ Typed-functions in TS using decorators
 
 ## Introduction
 
-[josdejong/typed-function](https://github.com/josdejong/typed-function) provides a flexible and organized way to do run-time type checking in JavaScript.  `ts-typed-function` is an experimental TypeScript wrapper on top of `typed-function`.
+[josdejong/typed-function](https://github.com/josdejong/typed-function) provides a flexible and organized way to do run-time type checking and overloading in JavaScript.  `ts-typed-function` is an experimental TypeScript wrapper on top of `typed-function`.
 
 `typed-function` has the following features:
 
@@ -16,186 +16,179 @@ Typed-functions in TS using decorators
 
 `ts-typed-function` adds the following:
 
-* Input arguments inferred from TypeScript types.
-* Type tests for classes inferred
-* Appropriate type signatures for typed functions.
+* Typed function signatures from TypeScript types.
+* Appropriate TS types for typed functions.
+* Types and type conversions can be added from the class
 
-## TLDR Usage
-
-(because nobody reads past the first example)
+## TLDR `ts-typed-function` Usage
 
 ```ts
-import { signature, typed } from './ts-typed-function';
+import { Typed, guard, conversion, signature } from 'ts-typed-function';
 
-class Print {
-  name: 'print';
+// Create a new, isolated instance of ts-typed-function.
+const typed = new Typed();
 
-  @signature()
-  num(a: number, b: boolean) {
-    return `a is the number ${a}, b is ${b.toString().toUpperCase()}`;
+// This is a typical  TS class definition
+class Complex {
+
+  // The `@guard` decorator is used to determine idenity of this class at runtime
+  // By default a guard is a test for the containing class
+  // in this case this is a runtime test for the `Complex` type
+  @guard()
+  static isComplex(a: any): a is Complex {
+    return a instanceof Complex;
   }
 
-  @signature()
-  str(a: string) {
-    return `a is "${a}"`;
+  // The `@conversion` decorator defines a method for converting one type into another
+  // ts-typed-function uses the TS types to determine the conversion
+  // in this case from a `number` to a C`omplex` class instance
+  @conversion()
+  static fromNumber(a: number): Complex {
+    return new Complex(a, 0);
   }
 
-  @signature()
-  fish(a: Fish) {
-    return `a is a fish named ${a.name}`;
+  constructor(public re: number, public im: number) {}
+
+  times(b: Complex): Complex {
+    return new Complex(this.re * b.re - this.im * b.im, this.re * b.im + this.re * b.im);
   }
 }
 
-const print = typed.function(Print);
+// Once added to the ts-typed-function instance the type and conversions are defined
+typed.add(Complex);
 
-// use the functions
-console.log(fn(42, true));            // outputs 'a is the number 42, b is TRUE'
-console.log(fn('everything'));        // outputs 'a is "everything"'
-console.log(fn(new Fish('wanda'))));  // outputs 'a is a fish named wanda'
- 
-try {
-  // fn('hello', 'world');       // This will not pass the TS compiler
-  (fn as any)(42, 'everything'); // This will throw at run-time
+// This class is a `ts-typed-function` function definition
+class Times {
+  // the resulting function will have this name
+  // Default is the class name
+  name: 'times';
+
+  // The `@signature` decorator defines a signiture for typed-function
+  // The types are infered from the TS types, in this case (`number, number`)
+  // This method is only invoked if both inputs are `number`.
+  @signature()
+  number(a: number, b: number): number {
+    return a * b;
+  }
+
+  // this is a TS override so for the `complex` method defined below
+  // This is necessary to get a properly typed ts-typed-function
+  complex(a: number | Complex, b: number | Complex): Complex;
+
+  // The `@signature` decorator defines a signiture for typed-function
+  // The types are infered from the TS compile time types, in this case (`Complex, Complex`)
+  // This methid is invoked if both inputs are `Complex`
+  // The conversion from `number` to Complex (defined above) will allow 
+  // `numbers` to be converted to `Complex` before this is invoked
+  @signature()
+  complex(a: Complex, b: Complex): Complex {
+    return a.times(b);
+  }
 }
-catch (err) {
-  console.log(err.toString());
-  // outputs:  TypeError: Unexpected type of argument in function unnamed
-  // (expected: boolean, actual: string, index: 1)
-}
+
+// Generates the typoed function
+// The TS defintion of this function is the intersection of all methods (and overrides) on the `Times` class
+// in this case `((a: number, b: number) => number) & (a: number | Complex, b: number | Complex) => Complex)`
+const times = typed.function(Times);
+
+// returns 18, with TS compile type of `number`
+times(3, 6);
+
+// returns the complex number (18i) with TS compile time type of `Complex`
+times(new Complex(3, 0), new Complex(0, 6));
+
+// returns the complex number (18i) with TS compile time type of `Complex`
+times(3, new Complex(0, 6));
+
+// TS doesn't allow passing a string to the times function at compile time
+// typed-funtion would throw a TypeError at runtime
+// times(3, '6');
 ```
 
 ## Usage Explanation
 
-### `typed-function` without TypeScript
+### `typed-function` in TypeScript without ts-typed-function
 
 ```js
-const typed = require('typed-function');
-
-typed.addType({
-  name: 'Fish',
-  test: function(a) {
-    return a instanceof Fish;
-  }
-});
-
-// create a typed function
-const fn = typed({
-  'number, boolean': function (a, b) {
-    return `a is the number ${a}, b is ${b.toString().toUpperCase()}`;
-  },
-  'string': function (a) {
-    return `a is "${a}"`;
-  },
-  'Fish': function (a) {
-    return `a is a fish named ${a.name}`;
-  }
-});
-```
-
-Here we have created a function that takes as input a number and a boolean or a string and a boolean.  Calling the function with any other parameter types as input will throw a runtime error.
-
-### `typed-function` with TypeScript
-
-Doing the same in TypeScript is similar:
-
-```ts
 import * as typed from 'typed-function';
 
-typed.addType({
-  name: 'Fish',
-  test: function(a: any): a is Fish {
-    return a instanceof Fish;
-  }
-});
-
-const fn = typed({
-  'number, boolean': function (a: number, b: boolean) {
-    return `a is the number ${a}, b is ${b.toString().toUpperCase()}`;
-  },
-  'string': function (a: string,) {
-    return `a is "${a}"`;
-  },
-  'Fish': function (a: Fish) {
-    return `a is a fish named ${a.name}`;
-  }
-});
-```
-
-The resulting function has the same runtime behavior.  However, we notice three issues:
-
-1) The input parameter types are redundantly defined, once for TypeScript and once for `typed-function`.
-2) The resulting function `fn` has a TypeScript type of `any`, and therefore provides no type safety.
-
-This last issue can be solved by typing the resulting function:
-
-```ts
-const signatures = {
-  'number, boolean': function (a: number, b: boolean) {
-    return 'a is a number, b is a boolean';
-  },
-  'string': function (a: string, b: boolean) {
-    return 'a is a string, b is a number';
-  },
-  'Fish': function (a: Fish) {
-    return `a is a fish named ${a.name}`;
-  }
-};
-
-type F = typeof signatures['number, boolean'] & typeof signatures['string'] & typeof signatures['Fish'];
-const fn: F = typed(fnSignatures);
-```
-
-Notice we are first defining the signatures object, then using the types of the these signatures to define the type of the typed-function. This is much better in terms of type safety but adds even more redundancy and not a great developer experience.
-
-### `ts-typed-function`
-
-`ts-typed-function` uses classes and method decorators to improve the developer experience:
-
-```ts
-import { signature, typed } from '@hypercubed/ts-typed-function';
-
-typed.addType({
-  name: 'Fish',
-  test: function(a: any): a is Fish {
-    return a instanceof Fish;
-  }
-});
-
-class Print {
-  static name = 'print';
-
-  @signature()
-  num(a: number, b: boolean) {
-    return `a is the number ${a}, b is the boolean ${b}`;
+class Complex {
+  @guard()
+  static isComplex(a: any): a is Complex {
+    return a instanceof Complex;
   }
 
-  @signature()
-  str(a: string) {
-    return `a is the string ${a}`;
+  // The `@conversion` decorator defines a method for converting one type into another
+  // ts-typed-function uses the TS types to determine the conversion
+  // in this case from a `number` to a C`omplex` class instance
+  @conversion()
+  static fromNumber(a: number): Complex {
+    return new Complex(a, 0);
   }
 
-  @signature()
-  fish(a: Fish) {
-    return `a is a fish named ${a.name}`;
+  constructor(public re: number, public im: number) {}
+
+  times(b: Complex): Complex {
+    return new Complex(this.re * b.re - this.im * b.im, this.re * b.im + this.im * b.re);
   }
 }
 
-const print = typed.function(Print);
+// Tell `typed-function` how to determine the Complex class instance at runtime
+typed.addType({
+  name: 'Complex',
+  test: Complex.isComplex
+});
+
+// Tell `typed-function` how to coinvert a `number` to a `Complex`
+typed.addConversion({
+  from: 'number'
+  to: 'Complex',
+  convert: Complex.fromNumber
+});
+
+// create a typed function
+const times = typed({
+  'number, number': function (a: number, b: number) {
+    return a * b;
+  },
+  'Complex, Complex': function (a: Complex, b: Complex): Complex {
+    return a.times(b);
+  }
+});
+
+// returns 18 (typed as any)
+times(3, 6);
+
+// returns the complex number (18i) (typed as any)
+times(new Complex(3, 0), new Complex(0, 6));
+
+// returns the complex number (18i) (typed as any)
+times(3, new Complex(0, 6))
+
+// Typescript allows this
+// typed-funtion throws at runtime
+times(3, '6')
 ```
 
-The create method is able to derive the `typed-function` signatures from the TypeScript signature (this only supports basic types, more on this later).
+The resulting function has the same runtime behavior as the `ts-typed-function` above.  However, we notice three issues:
+
+1) The type and conversions for redundantly defined
+2) The function parameters are redundantly typed, once for TS and once for `typed-function`.
+3) The resulting function (`times`) has a TypeScript type of `any`, and therefore provides no type safety.
 
 ### Explicit typing
 
-This library uses metadata reflections to infer types in the type signatures.  Since TypeScript only supports [basic type serialization](http://blog.wolksoftware.com/decorators-metadata-reflection-in-typescript-from-novice-to-expert-part-4#3-basic-type-serialization_1) only basic types can be inferred.  These basic types are `number`, `string`, `boolean`, `undefined`, `Array`, `Function`, `Date`, and `RegExp`.  Types that are also class constructors are are also supported.  Other types (including `any`, union types, and interfaces) are treated as `Object` for `typed-function`.  To support more complex types the input parameter signatures must be supplied to the `signature` decorator as a array of strings or class constructors.
+This library uses metadata reflections to infer types in the type signatures.  Since TypeScript only supports [basic type serialization](http://blog.wolksoftware.com/decorators-metadata-reflection-in-typescript-from-novice-to-expert-part-4#3-basic-type-serialization_1) only basic types can be inferred.  These basic types are `number`, `string`, `boolean`, `undefined`, `Array`, `Function`, `Date`, and `RegExp`.  Types that are class constructors are are also supported.  Other types (including `any`, union types, and interfaces) are treated as `Object` for `typed-function`.  To support more complex types the input parameter signatures must be supplied to the `signature` decorator as a array of strings or class constructors.
 
 ```ts
 class Fn {
   @signature(['number | string'])
-  num(a: number | string): any { return +a; }
+  num(a: number | string): any {
+    return +a;
+  }
 }
 
-const double = typed.function(Fn);
+const fn = typed.function(Fn);
 ```
 
 ### TypeScript function overloads
@@ -209,45 +202,40 @@ class Fn {
 
   @signature(['string'])
   @signature(['number'])
-  double(a: any): any {
+  double(a: string | number): any {
     return a + a;
   }
 }
 
-const double = typed.function(Fn);
+const fn = typed.function(Fn);
 ```
 
-Notice that as per typeScript requirements the implementation must be generic, therefore, the signatures will require a type as shown.
+Notice that as per TS requirements the overload signature must be compatible with its implementation signature, therefore, the signatures decorators will require a type as shown.
 
 ### Inheritance
 
-Signatures and types are inherited:
+Signatures are inherited:
 
 ```ts
-interface Decimal {
-  $decimal: string;
-}
-
-class InspectDecimal {
-  @signature(['Decimal'])
-  decimal(x: Decimal): string { return `the decimal ${x.$decimal}`; }
-}
-
-class Inspect extends InspectDecimal {
+class PrintComplex {
   @signature()
-  number(x: number): string { return `the number ${x}`; }
+  complex(x: Complex): string {
+    return `(${x.re}, ${x.im})`;
+  }
 }
 
-const inspect = typed.function(Inspect);
+class Print extends PrintComplex {
+  @signature()
+  number(x: number): string {
+    return '' + x;
+  }
+}
 
-console.log(inspect(42));            // outputs 'the number 42'
-console.log(inspect({ $decimal: '42' }));   // outputs 'the decimal 42'
+const print = typed.function(Print);
+
+print(42);                   // outputs "42"
+print(new Complex(3,1));     // outputs "(3, 1)"
 ```
-
-# Future (implementation TBD)
-
-* Optional parameters
-* Type conversions
 
 # License
 

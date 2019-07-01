@@ -1,59 +1,56 @@
 import test from 'ava';
-import { Typed, signature } from '../src/lib/typed-function';
+import { Typed, signature, conversion, guard } from '../src/';
 
 const typed = new Typed();
 
-class Convert {
-  @signature()
-  bton(x: boolean): number {
-    return +x;
+class BoxedValue {
+  @conversion()
+  static fromBoolean(x: boolean): BoxedValue {
+    return new BoxedValue(x, 'boolean');
   }
 
-  @signature(['number'])
-  @signature(['boolean'])
-  ntos(x: number | boolean): string {
-    return '' + x;
+  @conversion()
+  static fromNumber(x: number): BoxedValue {
+    return new BoxedValue(x, 'number');
+  }
+
+  @guard()
+  static isBoxedValue(x: any): x is BoxedValue {
+    return x instanceof BoxedValue;
+  }
+
+  constructor(private value: any, private kind: string) {}
+
+  inspect() {
+    return `boxed value ${this.value} is a ${this.kind}`;
   }
 }
 
-typed.addConversion(Convert);
+typed.add(BoxedValue);
 
 class Fn1 {
-  @signature(['string', 'string'])
-  add_strings(a: boolean | string, b: string) {
-    return `a is string, b is string`;
+  @signature()
+  str(a: string): string {
+    return `unboxed value ${a} is a string`;
   }
 
-  @signature(['number', 'string'])
-  add_numebrs(a: number, b: string) {
-    return `a is number, b is string`;
+  box(a: number | boolean | BoxedValue): string;
+
+  @signature(['BoxedValue'])
+  box(a: any): string {
+    return a.inspect();
+  }
+
+  @signature(['any'])
+  other(a: any): string {
+    return `value unknown`;
   }
 }
 
 test('calling the function works', t => {
   const fn = typed.function(Fn1);
 
-  t.is(fn(true, 'X'), `a is number, b is string`);
-  t.is(fn(3, 'X'), `a is number, b is string`);
-  t.is(fn('Y', 'X'), `a is string, b is string`);
-});
-
-class Fn2 {
-  @signature(['string', 'string'])
-  add_strings(a: boolean | string | number, b: string) {
-    return `a is string, b is string`;
-  }
-
-  @signature(['any', 'string'])
-  add_any(a: any, b: string) {
-    return `a is unknown, b is string`;
-  }
-}
-
-test('should convert before matching any', t => {
-  const fn = typed.function(Fn2);
-
-  t.is(fn('Y', 'X'), `a is string, b is string`);
-  t.is(fn(3, 'X'), `a is string, b is string`);  // see https://github.com/josdejong/typed-function/issues/14
-  t.is(fn(true, 'X'), `a is string, b is string`);
+  t.is(fn(true), `boxed value true is a boolean`);
+  t.is(fn(3), `boxed value 3 is a number`);
+  t.is(fn('Y'), `unboxed value Y is a string`);
 });

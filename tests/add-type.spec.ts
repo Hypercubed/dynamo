@@ -1,9 +1,10 @@
 import test from 'ava';
-import { signature, Typed } from '../src/lib/typed-function';
+import { signature, Typed, guard } from '../src/';
 
 const typed = new Typed();
 
 class Fish {
+  @guard()
   static isFish(a: any): a is Fish {
     return a instanceof Fish;
   }
@@ -11,10 +12,7 @@ class Fish {
   constructor(public name: string) {}
 }
 
-typed.addType({
-  name: 'Fish',
-  test: Fish.isFish
-});
+typed.add(Fish);
 
 test('implicit type', t => {
   class Fn {
@@ -128,4 +126,43 @@ test('explicit type, class', t => {
 
   t.is(fn.name, 'Fn');
   t.is(fn.length, 2);
+});
+
+class Tests {
+  @guard('zero')
+  static isZero({a}) {
+    return a === 0;
+  }
+
+  @guard('negative')
+  static isNegative({a}) {
+    return a < 0;
+  }
+}
+
+typed.add(Tests);
+
+test('strings', t => {
+  class Fn {
+    @signature(['zero'])
+    zero({a}): string {
+      return `a is zero`;
+    }
+
+    @signature(['negative'])
+    negative({a}): string {
+      return `a is negative`;
+    }
+
+    @signature()
+    num({a}): string {
+      return `a is a number`;
+    }
+  }
+  
+  const fn = typed.function(Fn);
+
+  t.is(fn({a: 10}), 'a is a number');
+  t.is(fn({a: 0}), 'a is zero');
+  t.is(fn({a: -10}), 'a is negative');
 });

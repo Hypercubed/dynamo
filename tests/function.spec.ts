@@ -1,5 +1,5 @@
 import test from 'ava';
-import { Typed, signature } from '../src/lib/typed-function';
+import { Typed, signature } from '../src/';
 
 const typed = new Typed();
 
@@ -108,7 +108,7 @@ test('can create function given types', t => {
   t.is(double.length, 1);
 });
 
-test.only('inherit', t => {
+test('inherit', t => {
 
   class A {
     @signature()
