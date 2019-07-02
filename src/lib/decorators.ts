@@ -5,7 +5,7 @@ export const META_CONVERSIONS = Symbol('ts-typed-function:guards');
 // tslint:disable-next-line:variable-name
 export const Any = new Object(null);
 
-const names = new WeakMap();
+const names = new WeakMap<TypeToken, string>();
 
 names.set(Number, 'number');
 names.set(String, 'string');
@@ -18,19 +18,24 @@ names.set(Object, 'Object');
 names.set(Any, 'any');
 
 let _uuid = 0;
-function newTokenId(token: any) {
-  const name = typeof token.name === 'string' ? token.name : 'type';
-  return `${name}_${_uuid++}`;
+function newTokenId(token: TypeToken) {
+  const name = ('name' in token && typeof token.name === 'string') ? token.name : 'type';
+  return `${name}\$${_uuid++}`;
 }
 
-export function signature(...params: TypeToken[]) {
+export interface SignatureData {
+  key: string;
+  parameterTypes: string;
+}
+
+export function signature(...params: Array<TypeToken | TypeToken[]>) {
   if (typeof Reflect !== 'object') {
     throw new Error('reflect-metadata not found');
   }
-  
-  return function(target: any, key: string) {
+
+  return (target: any, key: string) => {
     const method = target[key];
-    
+
     if (typeof method === 'function') {
       if (params.length < 1) {
         params = Reflect.getMetadata('design:paramtypes', target, key) || [];
@@ -38,7 +43,7 @@ export function signature(...params: TypeToken[]) {
 
       const parameterTypes = params.map(getName).join(',');
 
-      const meta = Reflect.getMetadata(META_METHODS, target) || [];
+      const meta: SignatureData[] = Reflect.getMetadata(META_METHODS, target) || [];
 
       const data = {
         key,
@@ -50,14 +55,20 @@ export function signature(...params: TypeToken[]) {
   };
 }
 
+export interface ConversionData {
+  key: string;
+  parameterTypes: string;
+  returnType: string;
+}
+
 export function conversion(param?: TypeToken, ret?: TypeToken) {
   if (typeof Reflect !== 'object') {
     throw new Error('reflect-metadata not found');
   }
-  
-  return function(target: any, key: string) {
+
+  return (target: any, key: string) => {
     const method = target[key];
-    
+
     if (typeof method === 'function') {
       if (typeof param === 'undefined') {
         const params = Reflect.getMetadata('design:paramtypes', target, key) || [];
@@ -68,7 +79,7 @@ export function conversion(param?: TypeToken, ret?: TypeToken) {
       const parameterTypes = getName(param);
       const returnType = getName(ret);
 
-      const meta = Reflect.getMetadata(META_CONVERSIONS, target) || [];
+      const meta: ConversionData[] = Reflect.getMetadata(META_CONVERSIONS, target) || [];
 
       const data = {
         key,
@@ -81,16 +92,21 @@ export function conversion(param?: TypeToken, ret?: TypeToken) {
   };
 }
 
+export interface GuardData {
+  key: string;
+  guardName: string;
+}
+
 export function guard(token?: TypeToken) {
   if (typeof Reflect !== 'object') {
     throw new Error('reflect-metadata not found');
   }
-  return function(target: any, key: string) {
+  return (target: any, key: string) => {
     token = token || target;
 
     const guardName = getName(token);
 
-    const meta = Reflect.getMetadata(META_GUARDS, target) || [];
+    const meta: GuardData[] = Reflect.getMetadata(META_GUARDS, target) || [];
 
     const data = {
       key,
@@ -101,7 +117,10 @@ export function guard(token?: TypeToken) {
   };
 }
 
-function getName(token: TypeToken): string {
+function getName(token: TypeToken | TypeToken[]): string {
+  if (Array.isArray(token)) {
+    return token.map(getName).join(' | ');
+  }
   if (token === null || typeof token === 'undefined') {
     return String(token);
   }

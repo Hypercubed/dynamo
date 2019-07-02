@@ -1,6 +1,8 @@
+declare module 'typed-function';
+
 interface Constructor {
   prototype: any;
-  new(...args: any[]);
+  new(...args: any[]): any;
 }
 
 type AnyFunction = (...args: any[]) => any;

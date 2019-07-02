@@ -2,7 +2,7 @@
 
 import 'reflect-metadata';
 import * as typedFunction from 'typed-function';
-import { META_METHODS, META_GUARDS, META_CONVERSIONS } from './decorators';
+import { META_METHODS, META_GUARDS, META_CONVERSIONS, SignatureData, ConversionData, GuardData } from './decorators';
 
 export class Typed {
   constructor(public _typed = typedFunction.create()) {
@@ -24,12 +24,16 @@ export class Typed {
   function<T extends Constructor>(ctor: T): FunctionProperties<InstanceType<T>> {
     const target = new ctor();
     const name = target.name || ctor.name;
-  
+
     const arr = Reflect.getMetadata(META_METHODS, target);
+
+    if (!arr || arr.length < 0) {
+      throw new Error('No signatures provided');
+    }
 
     let maxLength = 0;
     const sigMap: any = {};
-    arr.forEach(({ key, parameterTypes }) => {
+    arr.forEach(({ key, parameterTypes }: SignatureData) => {
       sigMap[parameterTypes] = target[key];
       maxLength = Math.max(maxLength, target[key].length);
     });
@@ -43,7 +47,7 @@ export class Typed {
 
   private _addTypes(ctor: Constructor) {
     const guards = Reflect.getMetadata(META_GUARDS, ctor) || [];
-    guards.forEach(({ key, guardName}) => {
+    guards.forEach(({ key, guardName}: GuardData) => {
       this._typed.addType({
         name: guardName,
         test: ctor[key]
@@ -52,13 +56,12 @@ export class Typed {
   }
 
   private _addConversions(ctor: Constructor) {
-    const target = ctor;
-    const arr = Reflect.getMetadata(META_CONVERSIONS, target) || [];
-    arr.forEach(({ key, parameterTypes, returnType }) => {
+    const arr = Reflect.getMetadata(META_CONVERSIONS, ctor) || [];
+    arr.forEach(({ key, parameterTypes, returnType }: ConversionData) => {
       this._typed.addConversion({
         from: parameterTypes,
         to: returnType,
-        convert: target[key]
+        convert: ctor[key]
       });
     });
   }

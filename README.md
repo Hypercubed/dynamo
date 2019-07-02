@@ -100,8 +100,8 @@ times(new Complex(3, 0), new Complex(0, 6));
 // returns the complex number (18i) with TS compile time type of `Complex`
 times(3, new Complex(0, 6));
 
-// TS doesn't allow passing a string to the times function at compile time
-// typed-funtion would throw a TypeError at runtime
+// TS doesn't allow passing a `number, string` to the times function at compile time
+// typed-function would throw a TypeError at runtime
 // times(3, '6');
 ```
 
@@ -166,7 +166,7 @@ times(new Complex(3, 0), new Complex(0, 6));
 times(3, new Complex(0, 6))
 
 // Typescript allows this
-// typed-funtion throws at runtime
+// typed-function throws at runtime
 times(3, '6')
 ```
 

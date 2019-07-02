@@ -1,4 +1,6 @@
 import test from 'ava';
+import { IsExact, assert } from 'conditional-type-checks';
+
 import { signature, Typed, guard, conversion } from '../src';
 
 // Create a new, isolated instance of ts-typed-function.
@@ -65,10 +67,24 @@ class Times {
 // in this case `number, number` and `Complex, Complex`.
 const times = typed.function(Times);
 
+test('times has the correct signiture', t => {
+  type T1 = (a: number, b: number) => number;
+  type T2 = (a: number | Complex, b: number | Complex) => Complex;
+
+  assert<IsExact<typeof times, T1 & T2>>(true);
+
+  t.is(times.name, 'Times');
+  t.is(times.length, 2);
+});
+
 test('using the typed-function', t => {
-  const a: number = times(3, 6); // returns 18
-  const b: Complex = times(new Complex(3, 0), new Complex(0, 6));  // returns the complex number (18i)
-  const c: Complex = times(3, new Complex(0, 6));  // returns the complex number (18i)
+  const a = times(3, 6); // returns 18
+  const b = times(new Complex(3, 0), new Complex(0, 6));  // returns the complex number (18i)
+  const c = times(3, new Complex(0, 6));  // returns the complex number (18i)
+
+  assert<IsExact<typeof a, number>>(true);
+  assert<IsExact<typeof b, Complex>>(true);
+  assert<IsExact<typeof c, Complex>>(true);
 
   t.is(a, 18);
   t.deepEqual(b, new Complex(0, 18));
@@ -79,14 +95,14 @@ test('errors', t => {
   // Typescript doesn't allow comparing a number (restult of times(3, 6)) to a complex value
   // t.is(times(3, 6), new Complex(18, 0));
 
+  // Typescript doesn't allow passing a string to the times function
+  // t.is(times(3, '6'), 18);
+
+  // Typescript doesn't allow comparing a number (restult of times(3, 6)) to a complex value
+  // t.is(times(3, 6), new Complex(18, 0));
+
   t.throws(() => {
-    // Typescript doesn't allow passing a string to the times function
-    // t.is(times(3, '6'), 18);
-
-    // Typescript doesn't allow comparing a number (restult of times(3, 6)) to a complex value
-    // t.is(times(3, 6), new Complex(18, 0));
-
     // typed-funtion throws at runtime
-    t.is(times(3, '6' as any), 18);
+    times(3, '6' as any);
   });
 });
