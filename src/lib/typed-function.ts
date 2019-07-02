@@ -33,7 +33,7 @@ export class Typed {
       sigMap[parameterTypes] = target[key];
       maxLength = Math.max(maxLength, target[key].length);
     });
-  
+
     const fn = this._typed(name, sigMap);
 
     // see https://github.com/josdejong/typed-function/issues/13

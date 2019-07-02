@@ -1,5 +1,5 @@
 import test from 'ava';
-import { Typed, signature } from '../src/';
+import { Typed, signature, guard, conversion } from '../src/';
 
 const typed = new Typed();
 
@@ -84,8 +84,8 @@ class DoublePrim {
 
   // Here we are "assigning" them to a function named 'double'.
   // Notice here we are defining each signature, we cannot infer the type from an override method
-  @signature(['number'])
-  @signature(['string'])
+  @signature(Number)
+  @signature(String)
   double_prim(a: any): any {
     return a + a;
   }

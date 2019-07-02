@@ -52,7 +52,7 @@ test('implicit type', t => {
   t.is(fn.length, 2);
 });
 
-test('explicit type, string', t => {
+test('explicit type', t => {
   class Fn {
     @signature()
     num(a: number, b: boolean) {
@@ -64,7 +64,7 @@ test('explicit type, string', t => {
       return `a is "${a}"`;
     }
 
-    @signature(['Fish'])
+    @signature(Fish)
     fish(a: Fish) {
       return `a is a fish named ${a.name}`;
     }
@@ -90,51 +90,19 @@ test('explicit type, string', t => {
   t.is(fn.length, 2);
 });
 
-test('explicit type, class', t => {
-  class Fn {
-    @signature()
-    num(a: number, b: boolean) {
-      return `a is the number ${a}, b is ${b.toString().toUpperCase()}`;
-    }
-  
-    @signature()
-    str(a: string) {
-      return `a is "${a}"`;
-    }
+// tslint:disable-next-line:variable-name
+const Zero = Object.create(null);
 
-    @signature([Fish])
-    fish(a: Fish) {
-      return `a is a fish named ${a.name}`;
-    }
-  }
-  
-  const fn = typed.function(Fn);
-
-  t.is(typeof fn, 'function');
-  t.is(fn(15, true), 'a is the number 15, b is TRUE');
-  t.is(fn('hello'), 'a is "hello"');
-  t.is(fn(new Fish('wanda')), 'a is a fish named wanda');
-
-  try {
-    (fn as any)(42, 'false');
-  } catch (err) {
-    t.is(
-      err.toString(),
-      'TypeError: Unexpected type of argument in function Fn (expected: boolean, actual: string, index: 1)'
-    );
-  }
-
-  t.is(fn.name, 'Fn');
-  t.is(fn.length, 2);
-});
+// tslint:disable-next-line:variable-name
+const Negative = Object.create(null);
 
 class Tests {
-  @guard('zero')
+  @guard(Zero)
   static isZero({a}) {
     return a === 0;
   }
 
-  @guard('negative')
+  @guard(Negative)
   static isNegative({a}) {
     return a < 0;
   }
@@ -142,14 +110,14 @@ class Tests {
 
 typed.add(Tests);
 
-test('strings', t => {
+test('adding multiple types', t => {
   class Fn {
-    @signature(['zero'])
+    @signature(Zero)
     zero({a}): string {
       return `a is zero`;
     }
 
-    @signature(['negative'])
+    @signature(Negative)
     negative({a}): string {
       return `a is negative`;
     }
@@ -165,4 +133,37 @@ test('strings', t => {
   t.is(fn({a: 10}), 'a is a number');
   t.is(fn({a: 0}), 'a is zero');
   t.is(fn({a: -10}), 'a is negative');
+});
+
+const oldFish = Fish;
+
+test('prevent collisions', t => {
+  // tslint:disable-next-line:no-shadowed-variable
+  class Fish {
+    @guard(Fish)
+    static isFish(a: any): a is Fish {
+      return a instanceof Fish;
+    }
+  
+    constructor(public name: string) {}
+  }
+
+  typed.add(Fish);
+
+  class Fn {
+    @signature(oldFish)
+    old_fish(x: any): string {
+      return `a is the old fish`;
+    }
+
+    @signature(Fish)
+    new_fish(x: Fish): string {
+      return `a is the new fish`;
+    }
+  }
+  
+  const fn = typed.function(Fn);
+
+  t.is(fn(new Fish('Nemo')), `a is the new fish`);
+  t.is(fn(new oldFish('Nemo')), `a is the old fish`);
 });

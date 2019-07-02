@@ -2,7 +2,28 @@ export const META_METHODS = Symbol('ts-typed-function:params');
 export const META_GUARDS = Symbol('ts-typed-function:guards');
 export const META_CONVERSIONS = Symbol('ts-typed-function:guards');
 
-export function signature(params?: TypeToken[], ret?: TypeToken) {
+// tslint:disable-next-line:variable-name
+export const Any = new Object(null);
+
+const names = new WeakMap();
+
+names.set(Number, 'number');
+names.set(String, 'string');
+names.set(Boolean, 'boolean');
+names.set(Function, 'Function');
+names.set(Array, 'Array');
+names.set(Date, 'Date');
+names.set(RegExp, 'RegExp');
+names.set(Object, 'Object');
+names.set(Any, 'any');
+
+let _uuid = 0;
+function newTokenId(token: any) {
+  const name = typeof token.name === 'string' ? token.name : 'type';
+  return `${name}_${_uuid++}`;
+}
+
+export function signature(...params: TypeToken[]) {
   if (typeof Reflect !== 'object') {
     throw new Error('reflect-metadata not found');
   }
@@ -11,18 +32,17 @@ export function signature(params?: TypeToken[], ret?: TypeToken) {
     const method = target[key];
     
     if (typeof method === 'function') {
-      params = params || Reflect.getMetadata('design:paramtypes', target, key) || [];
-      ret = ret || Reflect.getMetadata('design:returntype', target, key) || '';
+      if (params.length < 1) {
+        params = Reflect.getMetadata('design:paramtypes', target, key) || [];
+      }
 
-      const parameterTypes = params.map(normalizeName).join(',');
-      const returnType = normalizeName(ret);
+      const parameterTypes = params.map(getName).join(',');
 
       const meta = Reflect.getMetadata(META_METHODS, target) || [];
 
       const data = {
         key,
-        parameterTypes,
-        returnType
+        parameterTypes
       };
 
       Reflect.defineMetadata(META_METHODS, [...meta, data], target);
@@ -30,7 +50,7 @@ export function signature(params?: TypeToken[], ret?: TypeToken) {
   };
 }
 
-export function conversion(params?: TypeToken[], ret?: TypeToken) {
+export function conversion(param?: TypeToken, ret?: TypeToken) {
   if (typeof Reflect !== 'object') {
     throw new Error('reflect-metadata not found');
   }
@@ -39,11 +59,14 @@ export function conversion(params?: TypeToken[], ret?: TypeToken) {
     const method = target[key];
     
     if (typeof method === 'function') {
-      params = params || Reflect.getMetadata('design:paramtypes', target, key) || [];
+      if (typeof param === 'undefined') {
+        const params = Reflect.getMetadata('design:paramtypes', target, key) || [];
+        param = params[0] || '';
+      }
       ret = ret || Reflect.getMetadata('design:returntype', target, key) || '';
 
-      const parameterTypes = params.map(normalizeName).join(',');
-      const returnType = normalizeName(ret);
+      const parameterTypes = getName(param);
+      const returnType = getName(ret);
 
       const meta = Reflect.getMetadata(META_CONVERSIONS, target) || [];
 
@@ -65,7 +88,7 @@ export function guard(token?: TypeToken) {
   return function(target: any, key: string) {
     token = token || target;
 
-    const guardName = normalizeName(token);
+    const guardName = getName(token);
 
     const meta = Reflect.getMetadata(META_GUARDS, target) || [];
 
@@ -78,15 +101,15 @@ export function guard(token?: TypeToken) {
   };
 }
 
-function normalizeName(x: TypeToken): string {
-  if (typeof x === 'string') return x;
-  if (x === null || x === undefined || typeof x.name !== 'string') return String(x);
-  switch (x.name) {
-    case 'String':
-    case 'Number':
-    case 'Boolean':
-      return String.prototype.toLowerCase.call(x.name);
-    default:
-      return  x.name;
+function getName(token: TypeToken): string {
+  if (token === null || typeof token === 'undefined') {
+    return String(token);
   }
+  if (names.has(token)) {
+    return names.get(token);
+  }
+
+  const name = newTokenId(token);
+  names.set(token, name);
+  return name;
 }

@@ -1,9 +1,14 @@
 import test from 'ava';
-import { Typed, signature, conversion, guard } from '../src/';
+import { Typed, signature, conversion, guard, Any } from '../src/';
 
 const typed = new Typed();
 
 class BoxedValue {
+  @guard()
+  static isBoxedValue(x: any): x is BoxedValue {
+    return x instanceof BoxedValue;
+  }
+
   @conversion()
   static fromBoolean(x: boolean): BoxedValue {
     return new BoxedValue(x, 'boolean');
@@ -12,11 +17,6 @@ class BoxedValue {
   @conversion()
   static fromNumber(x: number): BoxedValue {
     return new BoxedValue(x, 'number');
-  }
-
-  @guard()
-  static isBoxedValue(x: any): x is BoxedValue {
-    return x instanceof BoxedValue;
   }
 
   constructor(private value: any, private kind: string) {}
@@ -36,12 +36,12 @@ class Fn1 {
 
   box(a: number | boolean | BoxedValue): string;
 
-  @signature(['BoxedValue'])
+  @signature(BoxedValue)
   box(a: any): string {
     return a.inspect();
   }
 
-  @signature(['any'])
+  @signature(Any)
   other(a: any): string {
     return `value unknown`;
   }

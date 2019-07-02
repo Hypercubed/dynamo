@@ -4,7 +4,7 @@ import { signature, Typed, guard, conversion } from '../src';
 const typed = new Typed();
 
 class BigIntDefinition {
-  @guard('BigInt')
+  @guard(BigInt)
   static isBigInt(a: any): a is bigint {
     return typeof a === 'bigint';
   }
@@ -49,7 +49,7 @@ class Times {
   ntimes(a: number | bigint, b: number | bigint): number | bigint;
 
   @signature()
-  @signature(['BigInt', 'BigInt'])
+  @signature(BigInt, BigInt)
   ntimes(a: number, b: number): number {
     return a * b;
   }

@@ -4,7 +4,7 @@ interface Constructor {
 }
 
 type AnyFunction = (...args: any[]) => any;
-type TypeToken = string | Constructor;
+type TypeToken = Constructor | AnyFunction | Object | null | undefined;
 
 interface SignatureMap {
   [key: string]: AnyFunction;
