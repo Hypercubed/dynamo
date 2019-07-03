@@ -2,8 +2,9 @@ export const META_METHODS = Symbol('ts-typed-function:params');
 export const META_GUARDS = Symbol('ts-typed-function:guards');
 export const META_CONVERSIONS = Symbol('ts-typed-function:guards');
 
-// tslint:disable-next-line:variable-name
-export const Any = new Object(null);
+export class Any {
+  
+}
 
 const names = new WeakMap<TypeToken, string>();
 

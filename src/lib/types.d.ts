@@ -1,12 +1,17 @@
 declare module 'typed-function';
 
 interface Constructor {
-  prototype: any;
+  readonly prototype: any;
   new(...args: any[]): any;
 }
 
+interface ConstructorLike {
+  (value?: any): bigint;
+  readonly prototype: BigInt;
+}
+
 type AnyFunction = (...args: any[]) => any;
-type TypeToken = Constructor | AnyFunction | Object | null | undefined;
+type TypeToken = Constructor | ConstructorLike | null | undefined;
 
 interface SignatureMap {
   [key: string]: AnyFunction;
