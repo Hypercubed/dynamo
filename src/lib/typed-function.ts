@@ -4,12 +4,27 @@ import 'reflect-metadata';
 import * as typedFunction from 'typed-function';
 import { META_METHODS, META_GUARDS, META_CONVERSIONS, SignatureData, ConversionData, GuardData } from './decorators';
 
+interface TypedOptions {
+  typed?: any;
+}
+
 export class Typed {
-  constructor(public _typed = typedFunction.create()) {
+  private _typed: any;
+
+  constructor(private options: TypedOptions = {}) {
+    this._typed = options.typed || typedFunction.create();
   }
 
   create() {
-    return new Typed(this._typed.create());
+    const _typed = typedFunction.create();
+
+    _typed.types = this._typed.types.slice();
+    _typed.conversions = this._typed.conversions.slice();
+
+    return new Typed({
+      ...this.options,
+      typed: _typed
+    });
   }
 
   add(...ctors: Constructor[]) {

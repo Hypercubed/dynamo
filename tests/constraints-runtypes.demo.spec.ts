@@ -1,22 +1,25 @@
 import test from 'ava';
 import { Typed, signature, guard } from '../src';
-import { Number as NumberType, String as StringType, Static, Constraint, Record } from 'runtypes';
-import { assert, IsExact, Has } from 'conditional-type-checks';
+import { Number as NumberType, String as StringType, Static, Runtype, Record } from 'runtypes';
+import { assert, IsExact } from 'conditional-type-checks';
 
 const typed = new Typed();
 
-function convertConstraint(constraint: any) {
-  class CC {
+function convertConstraint<T extends Runtype>(constraint: T) {
+  class Constraint {
     static guard = constraint.guard;
   }
 
-  Object.defineProperty(CC, 'name', { value: constraint.tag });
-  guard()(CC, 'guard');
-  return CC;
+  if ('tag' in constraint) {
+    Object.defineProperty(Constraint, 'name', { value: constraint['tag'] });
+  }
+
+  guard()(Constraint, 'guard');
+  return Constraint;
 }
 
 const nonEmptyString = StringType.withConstraint(x => {
-  return typeof x === 'string' && x.length > 0;
+  return x.length > 0;
 });
 
 // tslint:disable-next-line:variable-name
@@ -43,18 +46,18 @@ const person = Record({
 const Person = convertConstraint(person);
 type Person = Static<typeof person>;
 
-typed.add(NonEmptyString, Positive);
+typed.add(NonEmptyString, Positive, Person);
+
+class CreatePerson {
+  @signature()
+  person(name: NonEmptyString, age: Positive): Person {
+    return { name, age };
+  }
+}
+
+const createPerson = typed.function(CreatePerson);
 
 test('example', t => {
-  class CreatePerson {
-    @signature()
-    person(name: NonEmptyString, age: Positive): Person {
-      return { name, age };
-    }
-  }
-
-  const createPerson = typed.function(CreatePerson);
-
   assert<IsExact<typeof createPerson, (name: NonEmptyString, age: Positive) => Person>>(true);
 
   t.throws(() => {
@@ -71,4 +74,25 @@ test('example', t => {
   }, 'Unexpected type of argument in function CreatePerson (expected: constraint$1, actual: number, index: 1)');
 
   t.deepEqual(createPerson('Mike', 45), { name: 'Mike', age: 45 });    // ok
+});
+
+class GetName {
+  @signature()
+  getName(p: Person): NonEmptyString {
+    return p.name;
+  }
+}
+
+const getName = typed.function(GetName);
+
+test('getName', t => {
+  assert<IsExact<typeof getName, (person: Person) => NonEmptyString>>(true);
+
+  t.throws(() => {
+    // @ts-ignore
+    getName(45);
+  }, 'Unexpected type of argument in function GetName (expected: record$2, actual: number, index: 0)');
+
+  const mike = createPerson('Mike', 45);
+  t.is(getName(mike), 'Mike');
 });
