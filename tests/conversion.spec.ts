@@ -57,7 +57,7 @@ test('calling the function works', t => {
   t.is(fn({}), `value [object Object] is unknown`);
 });
 
-test.skip('conversions', t => {
+test('conversions', t => {
   t.is(fn(true), `boxed value true is a boolean`);
   t.is(fn(3), `boxed value 3 is a number`);
 });

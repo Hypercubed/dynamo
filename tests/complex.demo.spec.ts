@@ -88,7 +88,7 @@ test('using the typed-function', t => {
   t.deepEqual(b, new Complex(0, 18));
 });
 
-test.skip('with conversion', t => {
+test('conversion', t => {
   const c = times(3, new Complex(0, 6));  // returns the complex number (18i)
   assert<IsExact<typeof c, Complex>>(true);
   t.deepEqual(c, new Complex(0, 18));        // 6 is upconverted to a complex

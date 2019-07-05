@@ -43,5 +43,7 @@ test.skip('should throw when signatures collide', t => {
     }
     
     const f = typed.function(F);
+    t.is(f(), 'Null');
+
   }, 'Unknown type "Foo$0"');
 });

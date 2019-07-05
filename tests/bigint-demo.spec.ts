@@ -48,6 +48,7 @@ class Times {
 
   ntimes(a: number | bigint, b: number | bigint): number | bigint;
 
+  // TODO: nned to  be able to reverse these.
   @signature()
   @signature(BigInt, BigInt)
   ntimes(a: number, b: number): number {
@@ -73,7 +74,7 @@ test('no conversion', t => {
   t.deepEqual(times(new Complex(3n, 0n), new Complex(6n, 0n)), new Complex(18n, 0n));
 });
 
-test.skip('conversion', t => {
+test('conversion', t => {
   t.is(times(3n, 6), 18n);      // 6 is upconverted to a bigint
   t.deepEqual(times(new Complex(3n, 0n), 6), new Complex(18n, 0n));   // 6 is upconverted to a complex
   t.deepEqual(times(new Complex(3n, 0n), 6n), new Complex(18n, 0n));   // 6n is converted to a complex
