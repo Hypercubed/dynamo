@@ -7,12 +7,14 @@ import {
   SignatureMap, GuardMap, ConversionMap, Parameter
 } from './decorators';
 import { 
-  Number as NumberType, Boolean as BooleanType, String as StringType,
+  Number as NumberType, String as StringType,
+  Boolean as BooleanType,
   Null, Function as FunctionType,
   Runtype, Tuple, Union, Guard, InstanceOf, Unknown, Undefined,
   Matcher1, Case
 } from 'runtypes';
-import show from 'runtypes/lib/show';
+import { create } from 'runtypes/lib/runtype';
+// import show from 'runtypes/lib/show';
 
 export * from 'runtypes';
 
@@ -93,12 +95,14 @@ export class Typed {
     }
 
     let maxLength = 0;
-    const sequence = [];
+    let minLength = Infinity;
+    const sequence: Array<[Runtype, any]> = [];
 
     for (const key in map) {
       const signatures = map[key];
       signatures.forEach(signature => {
         maxLength = Math.max(maxLength, signature.length);
+        minLength = Math.min(minLength, signature.length);
         const [g, converters] = this._getSignatureGuard(signature);
         sequence.push([g, {
           converters,
@@ -107,18 +111,44 @@ export class Typed {
       });
     }
 
+    const fn = this._makeFunction(sequence, minLength, maxLength);
+
+    if (fn.length !== maxLength) {
+      Object.defineProperty(fn, 'length', { value: maxLength });
+    }
+
+    Object.defineProperty(fn, 'name', { value: name });
+    return fn as any;
+  }
+
+  private _makeFunction(sequence: Array<[Runtype, any]>, minLength: number, maxLength: number): any {
+    // Todo Optimizations:
+    // optimize runtype guards
+    // When min = max, skip spread?
+    // Detect when max length == 1, skip tuples
+    // Detect when there are no conversions, skip matchers
+    // optimized functions for sigs < 6, skip choose
+
+    if (maxLength === 0) {
+      // Special case when the function is a nullary
+      // not very usefull anyway
+      const { method } = sequence[0][1];
+      return function() {
+        if (arguments.length > 0) {
+          throw new TypeError('No alternatives were matched');
+        }
+        return method.call(this);
+      };
+    }
+
     const m = choose<any>(sequence);
-    const fn = function(...args: unknown[]) {
-      const { converters, method } = m(args);
+    return function(...args: unknown[]) {
+      const { method, converters } = m(args);
       for (const i in converters) {
         args[i] = converters[i](args[i]);
       }
       return method.apply(this, args);
     };
-
-    Object.defineProperty(fn, 'name', { value: name });
-    Object.defineProperty(fn, 'length', { value: maxLength });
-    return fn as any;
   }
 
   /**
@@ -127,6 +157,10 @@ export class Typed {
   private _getSignatureGuard(params: Parameter[]): [Runtype, Array<Matcher1<any, any>>] {
     const length = params.length;
     const lengthGuard = Guard((x: any[]): x is any => x.length === length, { name: `(arguments.length = ${length})` });
+
+    if (length === 0) {
+      return [lengthGuard, []];
+    }
     
     const unionsAndMatchers = params.map(t => this._convertParamToUnion(t));
     const runtypes = unionsAndMatchers.map(x => x[0]);
@@ -161,8 +195,12 @@ export class Typed {
 
     // @ts-ignore
     const union = Union(...runtypes);
+
+    // optmization... skip union type if there is only one type
+    const runtype = runtypes.length > 1 ? union : runtypes[0];
+
     // console.log('union: ', show(union));
-    return [union, union.match(...converters)];
+    return [runtype, union.match(...converters)];
   }
 
   private _convertTypeToRuntype(type: Type): Runtype {
