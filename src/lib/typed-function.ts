@@ -12,12 +12,7 @@ import {
   Runtype, Tuple, Union, Guard, InstanceOf, Unknown, Undefined,
   Matcher1, Case
 } from 'runtypes';
-// import show from 'runtypes/lib/show';
-
-declare module 'runtypes' {
-  // tslint:disable-next-line:no-empty-interface
-  interface Runtype<A> extends ObjectConstructor {}
-}
+import show from 'runtypes/lib/show';
 
 export * from 'runtypes';
 
@@ -106,19 +101,19 @@ export class Typed {
         maxLength = Math.max(maxLength, signature.length);
         const [g, converters] = this._getSignatureGuard(signature);
         sequence.push([g, {
-          key,
-          converters
+          converters,
+          method: target[key]
         }]);
       });
     }
 
     const m = choose<any>(sequence);
     const fn = function(...args: unknown[]) {
-      const { key, converters } = m(args);
+      const { converters, method } = m(args);
       for (const i in converters) {
         args[i] = converters[i](args[i]);
       }
-      return target[key].apply(this, args);
+      return method.apply(this, args);
     };
 
     Object.defineProperty(fn, 'name', { value: name });
@@ -131,7 +126,7 @@ export class Typed {
    */
   private _getSignatureGuard(params: Parameter[]): [Runtype, Array<Matcher1<any, any>>] {
     const length = params.length;
-    const lengthGuard = Guard((x: any[]): x is any => x.length === length);
+    const lengthGuard = Guard((x: any[]): x is any => x.length === length, { name: `(arguments.length = ${length})` });
     
     const unionsAndMatchers = params.map(t => this._convertParamToUnion(t));
     const runtypes = unionsAndMatchers.map(x => x[0]);
@@ -139,6 +134,7 @@ export class Typed {
 
     // @ts-ignore
     const tuple = Tuple(...runtypes);
+    // console.log('signature: ', show(lengthGuard.And(tuple)));
 
     return [lengthGuard.And(tuple), matchers];
   }
@@ -165,6 +161,7 @@ export class Typed {
 
     // @ts-ignore
     const union = Union(...runtypes);
+    // console.log('union: ', show(union));
     return [union, union.match(...converters)];
   }
 
@@ -187,7 +184,7 @@ export class Typed {
     for (const key in map) {
       const type = map[key];
       const method = ctor[key];
-      const _guard = typeof method === 'object' ? method : Guard(method);
+      const _guard = typeof method === 'object' ? method : Guard(method, { name: getName(type) });
       // TODO: error if adding a guard for the same type
       this.guards.set(type, _guard);
     }

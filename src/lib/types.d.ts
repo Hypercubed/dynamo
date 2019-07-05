@@ -10,7 +10,7 @@ interface ConstructorLike<V> extends Function {
 
 type AnyFunction = (...args: any[]) => any;
 
-type Type = Constructor<unknown> | ConstructorLike<unknown> | null | undefined;
+type Type = Constructor<unknown> | ConstructorLike<unknown> | null | undefined | Object;
 
 type FunctionKeys<T> = { [K in keyof T]: T[K] extends AnyFunction ? K : never }[keyof T];
 type Intersection<U> = (U extends any ? (k: U) => void : never) extends ((k: infer I) => void) ? I : never;
