@@ -29,7 +29,7 @@
     "clean": "rimraf build test",
     "all": "run-s reset test cov:check",
     "prepare-release": "run-s all",
-    "bench": "ts-node ./benchmarks/bench.ts"
+    "bench": "ts-node ./benchmarks/unary.ts"
   },
   "scripts-info": {
     "info": "Display information about the package scripts",

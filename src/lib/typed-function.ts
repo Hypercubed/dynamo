@@ -6,55 +6,65 @@ import {
   META_METHODS, META_GUARDS, META_CONVERSIONS,
   SignatureMap, GuardMap, ConversionMap, Parameter
 } from './decorators';
-import { 
-  Number as NumberType, String as StringType,
-  Boolean as BooleanType,
-  Null, Function as FunctionType,
-  Runtype, Tuple, Union, Guard, InstanceOf, Unknown, Undefined,
-  Matcher1, Case
-} from 'runtypes';
-import { create } from 'runtypes/lib/runtype';
-// import show from 'runtypes/lib/show';
-
-export * from 'runtypes';
+import { union, tuple, matcher, choose, Unknown } from './guardtypes';
 
 const I = (x: unknown) => x;
 
 class DefaultTypes {
   @guard(Number)
-  static isNumber = NumberType;
+  static isNumber = (x: unknown): x is number => {
+    return typeof x === 'number';
+  }
 
   @guard(String)
-  static isString = StringType;
+  static isString(x: unknown): x is string {
+    return typeof x === 'string';
+  }
 
   @guard(Boolean)
-  static isBoolean = BooleanType;
+  static isBoolean(x: unknown): x is boolean {
+    return typeof x === 'boolean';
+  }
 
   @guard(Function)
-  static isFunction = FunctionType;
+  static isFunction(x: unknown): x is AnyFunction {
+    return typeof x === 'function';
+  }
 
   @guard(Array)
-  static isArray = Array.isArray;
+  static isArray(x: unknown): boolean {
+    return Array.isArray(x);
+  }
 
   @guard(Date)
-  static isDate = InstanceOf(Date);
+  static isDate(x: unknown): x is Date {
+    return x instanceof Date;
+  }
 
   @guard(RegExp)
-  static isRegExp = InstanceOf(Date);
+  static isRegExp(x: unknown): x is RegExp {
+    return x instanceof RegExp;
+  }
 
   @guard(null)
-  static isNull = Null;
+  static isNull(x: unknown): x is null {
+    return x === null;
+  }
 
   @guard(undefined)
-  static isUndefined = Undefined;
+  static isUndefined(x: unknown): x is undefined {
+    return typeof x === 'undefined';
+  }
 
   @guard(Object)
-  static isObject = Guard((x: any): x is object => {
+  static isObject(x: unknown): x is object {
     return typeof x === 'object' && x !== null && x.constructor === Object;
-  });
+  }
 
   @guard(Unknown)
-  static isAny = Unknown;
+  static isUnknown(x: unknown): boolean {
+    return true;
+  }
 }
 
 interface TypedOptions {
@@ -69,7 +79,7 @@ interface ConversionMethod {
 }
 
 export class Typed {
-  private guards = new WeakMap<Type, Runtype>();
+  private guards = new WeakMap<Type, Guard<unknown>>();
   private conversions = new WeakMap<Type, ConversionMethod[]>();
 
   constructor(options: TypedOptions = {}) {
@@ -96,7 +106,7 @@ export class Typed {
 
     let maxLength = 0;
     let minLength = Infinity;
-    const sequence: Array<[Runtype, any]> = [];
+    const sequence: Array<[Guard<unknown>, any]> = [];
 
     for (const key in map) {
       const signatures = map[key];
@@ -121,7 +131,7 @@ export class Typed {
     return fn as any;
   }
 
-  private _makeFunction(sequence: Array<[Runtype, any]>, minLength: number, maxLength: number): any {
+  private _makeFunction(sequence: Array<[Guard<unknown>, any]>, minLength: number, maxLength: number): any {
     // Todo Optimizations:
     // optimize runtype guards
     // When min = max, skip spread?
@@ -145,7 +155,9 @@ export class Typed {
     return function(...args: unknown[]) {
       const { method, converters } = m(args);
       for (const i in converters) {
-        args[i] = converters[i](args[i]);
+        if (converters[i]) {
+          args[i] = converters[i](args[i]);
+        }
       }
       return method.apply(this, args);
     };
@@ -154,23 +166,20 @@ export class Typed {
   /**
    * Given an array type Parameters, returns the guard and matcher function
    */
-  private _getSignatureGuard(params: Parameter[]): [Runtype, Array<Matcher1<any, any>>] {
-    const length = params.length;
-    const lengthGuard = Guard((x: any[]): x is any => x.length === length, { name: `(arguments.length = ${length})` });
+  private _getSignatureGuard(params: Parameter[]): [Guard<unknown>, AnyFunction[]] {
+    const guardsAndMatchers = params.map(t => this._convertParamToUnion(t));
+    const guards = guardsAndMatchers.map(x => x[0]);
+    const matchers = guardsAndMatchers.map(x => x[1]);
 
-    if (length === 0) {
-      return [lengthGuard, []];
+    const hasConversions = matchers.some(Boolean);
+
+    const _tuple = tuple(guards);
+
+    if (hasConversions) {
+      return [_tuple, matchers];
     }
-    
-    const unionsAndMatchers = params.map(t => this._convertParamToUnion(t));
-    const runtypes = unionsAndMatchers.map(x => x[0]);
-    const matchers = unionsAndMatchers.map(x => x[1]);
 
-    // @ts-ignore
-    const tuple = Tuple(...runtypes);
-    // console.log('signature: ', show(lengthGuard.And(tuple)));
-
-    return [lengthGuard.And(tuple), matchers];
+    return [_tuple, []];
   }
 
   /**
@@ -178,7 +187,8 @@ export class Typed {
    * Arrays are converted to intersections
    * 
    */
-  private _convertParamToUnion(types: Type[]): [Runtype, Matcher1<any, any>] {
+  private _convertParamToUnion(types: Type[]): [Guard<unknown>, AnyFunction] {
+    const { length } = types;
     const converters: Conversion[] = types.map(() => I);
 
     types.forEach(toType => {
@@ -191,24 +201,27 @@ export class Typed {
       });
     });
 
-    const runtypes = types.map(t => this._convertTypeToRuntype(t));
+    const noConversions = length === types.length;
 
-    // @ts-ignore
-    const union = Union(...runtypes);
+    const guards = types.map(t => this._getGuard(t));
 
     // optmization... skip union type if there is only one type
-    const runtype = runtypes.length > 1 ? union : runtypes[0];
+    const _union = guards.length > 1 ? union(guards) : guards[0];
 
-    // console.log('union: ', show(union));
-    return [runtype, union.match(...converters)];
+    if (noConversions) {
+      return [_union, null];
+    }
+    
+    const _match = matcher(guards, converters);
+    return [_union, _match];
   }
 
-  private _convertTypeToRuntype(type: Type): Runtype {
+  private _getGuard(type: Type): Guard<unknown> {
     if (type === null) {
-      return Null;
+      return DefaultTypes.isNull;
     }
     if (type === undefined) {
-      return Undefined;
+      return DefaultTypes.isUndefined;
     }
 
     if (!this.guards.has(type)) {
@@ -222,9 +235,8 @@ export class Typed {
     for (const key in map) {
       const type = map[key];
       const method = ctor[key];
-      const _guard = typeof method === 'object' ? method : Guard(method, { name: getName(type) });
       // TODO: error if adding a guard for the same type
-      this.guards.set(type, _guard);
+      this.guards.set(type, method);
     }
   }
 
@@ -250,11 +262,4 @@ function getName(token: Type | Type[]): string {
     return String(token);
   }
   return ('name' in token && typeof token.name === 'string') ? token.name : 'unknown';
-}
-
-function choose<Z>(cases: Array<[any, Z]>): (x: any) => Z {
-  return (x: any) => {
-    for (const [T, f] of cases) if (T.guard(x)) return f;
-    throw new Error('No alternatives were matched');
-  };
 }
