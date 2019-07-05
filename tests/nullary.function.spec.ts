@@ -35,5 +35,5 @@ test('should throw when given too many arguments', t => {
   t.throws(() => {
     // @ts-ignore
     s(1);
-  }, 'Too many arguments in function foo (expected: 0, actual: 1)');
+  }, 'No alternatives were matched');
 });

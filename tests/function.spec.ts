@@ -25,7 +25,7 @@ test('should throw an error when composing with an unknown type', t => {
     }
 
     const fn = typed.function(SN);
-  }, 'Unknown type "Foo$0"');
+  }, 'Unknown type "Foo"');
 });
 
 test.skip('should throw when signatures collide', t => {

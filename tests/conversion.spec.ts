@@ -1,5 +1,5 @@
 import test from 'ava';
-import { Typed, signature, conversion, guard, Any } from '../src/';
+import { Typed, signature, conversion, guard, Unknown } from '../src/';
 
 const typed = new Typed();
 
@@ -41,16 +41,23 @@ class Fn1 {
     return a.inspect();
   }
 
-  @signature(Any)
+  @signature(Unknown)
   other(a: any): string {
-    return `value unknown`;
+    return `value ${a} is unknown`;
   }
 }
 
-test('calling the function works', t => {
-  const fn = typed.function(Fn1);
+const fn = typed.function(Fn1);
 
+test('calling the function works', t => {
+  t.is(fn(new BoxedValue(true, 'boolean')), `boxed value true is a boolean`);
+  t.is(fn(new BoxedValue(3, 'number')), `boxed value 3 is a number`);
+
+  t.is(fn('Y'), `unboxed value Y is a string`);
+  t.is(fn({}), `value [object Object] is unknown`);
+});
+
+test.skip('conversions', t => {
   t.is(fn(true), `boxed value true is a boolean`);
   t.is(fn(3), `boxed value 3 is a number`);
-  t.is(fn('Y'), `unboxed value Y is a string`);
 });

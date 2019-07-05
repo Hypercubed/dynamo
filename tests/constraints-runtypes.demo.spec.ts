@@ -63,15 +63,15 @@ test('example', t => {
   t.throws(() => {
     // @ts-ignore
     createPerson(45, 45);
-  }, 'Unexpected type of argument in function CreatePerson (expected: constraint$0, actual: number, index: 0)');
+  }, 'No alternatives were matched');
 
   t.throws(() => {
     createPerson('', 45);
-  }, 'Unexpected type of argument in function CreatePerson (expected: constraint$0, actual: string, index: 0)');
+  }, 'No alternatives were matched');
 
   t.throws(() => {
     createPerson('Mike', -1.2);
-  }, 'Unexpected type of argument in function CreatePerson (expected: constraint$1, actual: number, index: 1)');
+  }, 'No alternatives were matched');
 
   t.deepEqual(createPerson('Mike', 45), { name: 'Mike', age: 45 });    // ok
 });
@@ -91,7 +91,7 @@ test('getName', t => {
   t.throws(() => {
     // @ts-ignore
     getName(45);
-  }, 'Unexpected type of argument in function GetName (expected: record$2, actual: number, index: 0)');
+  }, 'No alternatives were matched');
 
   const mike = createPerson('Mike', 45);
   t.is(getName(mike), 'Mike');

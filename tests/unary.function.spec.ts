@@ -35,21 +35,21 @@ test('should throw when given too many arguments', t => {
   t.throws(() => {
     // @ts-ignore
     s(1, 2);
-  }, 'Too many arguments in function foo (expected: 1, actual: 2)');
+  }, 'No alternatives were matched');
 });
 
 test('should throw when given too few arguments', t => {
   t.throws(() => {
     // @ts-ignore
     s();
-  }, 'Too few arguments in function foo (expected: number, index: 0)');
+  }, 'No alternatives were matched');
 });
 
 test('should throw when given invalid arguments', t => {
   t.throws(() => {
     // @ts-ignore
     s('hello');
-  }, 'Unexpected type of argument in function foo (expected: number, actual: string, index: 0)');
+  }, 'No alternatives were matched');
 });
 
 class F {
@@ -85,7 +85,26 @@ test('should correctly recognize Date from Object (both are an Object)', t => {
   t.is(f({foo: 'bar'}), 'Object');
 });
 
-test.only('should correctly recognize Null from Object (both are an Object)', t => {
+test('should correctly recognize Null from Object (both are an Object)', t => {
   t.is(f(null), 'Null');
   t.is(f({foo: 'bar'}), 'Object');
+});
+
+class UnknownType {
+
+}
+
+class T {
+  name = 'foo';
+
+  @signature()
+  s(value: UnknownType): string {
+    return 'UnknownType: ' + value;
+  }
+}
+
+test('throws for unknwon type', t => {
+  t.throws(() => {
+    const fn = typed.function(T);
+  }, 'Unknown type "UnknownType"');
 });

@@ -79,7 +79,7 @@ test('getName', t => {
   t.throws(() => {
     // @ts-ignore
     getName(45);
-  }, 'Unexpected type of argument in function GetName (expected: Person$2, actual: number, index: 0)');
+  }, 'No alternatives were matched');
 
   const mike = createPerson('Mike', 45);
   t.is(getName(mike), 'Mike');

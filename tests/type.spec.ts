@@ -44,7 +44,7 @@ test('implicit type', t => {
   } catch (err) {
     t.is(
       err.toString(),
-      'TypeError: Unexpected type of argument in function Fn (expected: boolean, actual: string, index: 1)'
+      'Error: No alternatives were matched'
     );
   }
 
@@ -82,7 +82,7 @@ test('explicit type', t => {
   } catch (err) {
     t.is(
       err.toString(),
-      'TypeError: Unexpected type of argument in function Fn (expected: boolean, actual: string, index: 1)'
+      'Error: No alternatives were matched'
     );
   }
 

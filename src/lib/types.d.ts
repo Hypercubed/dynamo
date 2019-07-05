@@ -1,32 +1,16 @@
-declare module 'typed-function';
-
-interface Constructor {
+interface Constructor<V> extends Function {
   readonly prototype: any;
-  new(...args: any[]): any;
+  new(...args: any[]): V;
 }
 
-interface ConstructorLike {
-  (value?: any): bigint;
-  readonly prototype: BigInt;
+interface ConstructorLike<V> extends Function {
+  (value?: any): V;
+  readonly prototype: any;
 }
 
 type AnyFunction = (...args: any[]) => any;
-type TypeToken = Constructor | ConstructorLike | null | undefined;
 
-interface SignatureMap {
-  [key: string]: AnyFunction;
-}
-
-interface TypedType {
-  name: string;
-  test: (x: any) => boolean;
-}
-
-interface TypedConversion<T, U> {
-  from: string;
-  to: string;
-  convert: (x: T) => U;
-}
+type Type = Constructor<unknown> | ConstructorLike<unknown> | null | undefined;
 
 type FunctionKeys<T> = { [K in keyof T]: T[K] extends AnyFunction ? K : never }[keyof T];
 type Intersection<U> = (U extends any ? (k: U) => void : never) extends ((k: infer I) => void) ? I : never;
