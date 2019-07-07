@@ -96,7 +96,7 @@ class Baby extends Person {
   @guard()
   static isBaby(x: Person): x is Baby {
     if (!(x instanceof Person)) {
-      throw new Error('Should never be here, Person guard runs first!!');
+      throw new Error('Should never be here, isPerson guard runs first!!');
     }
     return x.age < 1;
   }

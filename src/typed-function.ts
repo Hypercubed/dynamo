@@ -1,12 +1,11 @@
 /// <reference path="./types.d.ts" />
-
 import 'reflect-metadata';
 import {
   guard,
   META_METHODS, META_GUARDS, META_CONVERSIONS,
   SignatureMap, GuardMap, ConversionMap, Parameter
 } from './decorators';
-import { union, tuple, matcher, choose, intersect, Unknown } from './guardtypes';
+import { union, tuple, matcher, choose, intersect, applier, Unknown } from './guardtypes';
 
 const I = (x: unknown) => x;
 
@@ -17,7 +16,7 @@ class DefaultTypes {
   }
 
   @guard(String)
-  static isString(x: unknown): x is string {
+  static isString = (x: unknown): x is string => {
     return typeof x === 'string';
   }
 
@@ -72,11 +71,9 @@ interface TypedOptions {
   autoadd: boolean;
 }
 
-type Conversion = (x: unknown) => unknown;
-
 interface ConversionMethod {
   fromType: Type;
-  convert: Conversion;
+  convert: Conversion<unknown, unknown>;
 }
 
 const defaultOptions: TypedOptions = {
@@ -125,11 +122,8 @@ export class Typed {
       signatures.forEach(signature => {
         maxLength = Math.max(maxLength, signature.length);
         minLength = Math.min(minLength, signature.length);
-        const [g, converters] = this._getSignatureGuard(signature);
-        sequence.push([g, {
-          converters,
-          method: target[key]
-        }]);
+        const [g, convert] = this._getSignatureGuard(signature);
+        sequence.push([g, [ target[key], convert ]]);
       });
     }
 
@@ -146,30 +140,53 @@ export class Typed {
   private _makeFunction(sequence: Array<[Guard<unknown>, any]>, minLength: number, maxLength: number): any {
     // Todo Optimizations:
     // When min = max, skip spread?
-    // Detect when max length == 1, skip tuples?
-    // Detect when there are no conversions, skip matchers
     // optimized functions for sigs < 6, skip choose
+
+    const [g0, [m0, c0]] = sequence[0];
 
     if (maxLength === 0) {
       // Special case when the function is a nullary
       // not very usefull anyway
-      const { method } = sequence[0][1];
       return function() {
         if (arguments.length > 0) {
           throw new TypeError('No alternatives were matched');
         }
-        return method.call(this);
+        return m0.call(this);
       };
     }
 
-    const m = choose<{ method: AnyFunction, converters: any[]}>(sequence);
-    return function(...args: unknown[]) {
-      const { method, converters } = m(args);
-      for (const i in converters) {
-        if (converters[i]) {
-          args[i] = converters[i](args[i]);
+    if (sequence.length === 1) {
+      // Special case when there is only one method
+      return function(...args: unknown[]) {
+        if (g0(args)) {
+          if (c0) args = c0(args);
+          return m0.apply(this, args);
         }
-      }
+        throw new TypeError('No alternatives were matched');
+      };
+    }
+
+    const [g1, [m1, c1]] = sequence[1];
+
+    if (sequence.length === 2) {
+      // Special case when there are two methdos
+      return function(...args: unknown[]) {
+        if (g0(args)) {
+          if (c0) args = c0(args);
+          return m0.apply(this, args);
+        }
+        if (g1(args)) {
+          if (c1) args = c1(args);
+          return m1.apply(this, args);
+        }
+        throw new TypeError('No alternatives were matched');
+      };
+    }
+
+    const m = choose<[ AnyFunction, AnyFunction ]>(sequence);
+    return function(...args: unknown[]) {
+      const [ method, convert ] = m(args);
+      if (convert) args = convert(args);
       return method.apply(this, args);
     };
   }
@@ -177,20 +194,13 @@ export class Typed {
   /**
    * Given an array type Parameters, returns the guard and matcher function
    */
-  private _getSignatureGuard(params: Parameter[]): [Guard<unknown>, AnyFunction[]] {
+  private _getSignatureGuard(params: Parameter[]): [Guard<unknown>, Conversion<unknown[], unknown[]>] {
     const guardsAndMatchers = params.map(t => this._convertParamToUnion(t));
     const guards = guardsAndMatchers.map(x => x[0]);
     const matchers = guardsAndMatchers.map(x => x[1]);
-
-    const hasConversions = matchers.some(Boolean);
-
     const _tuple = tuple(guards);
-
-    if (hasConversions) {
-      return [_tuple, matchers];
-    }
-
-    return [_tuple, []];
+    const _convert = applier(matchers);
+    return [_tuple, _convert];
   }
 
   /**
@@ -198,9 +208,9 @@ export class Typed {
    * Arrays are converted to intersections
    * 
    */
-  private _convertParamToUnion(types: Type[]): [Guard<unknown>, AnyFunction] {
+  private _convertParamToUnion(types: Type[]): [Guard<unknown>, Conversion<unknown, unknown>] {
     const { length } = types;
-    const converters: Conversion[] = types.map(() => I);
+    const converters: Array<Conversion<unknown, unknown>> = types.map(() => I);
 
     types.forEach(toType => {
       const conversions = this.conversions.get(toType) || [];
@@ -216,8 +226,7 @@ export class Typed {
 
     const guards = types.map(t => this._getGuard(t));
 
-    // optmization... skip union type if there is only one type
-    const _union = guards.length > 1 ? union(guards) : guards[0];
+    const _union = union(guards);
 
     if (noConversions) {
       return [_union, null];

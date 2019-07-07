@@ -9,8 +9,8 @@ interface ConstructorLike<V> extends Function {
 }
 
 type AnyFunction = (...args: any[]) => any;
-type Guard<T> = ((x: unknown) => x is T) | ((x: unknown) => boolean);
-type Conversion = (x: unknown) => unknown;
+type Guard<T extends unknown> = ((x: unknown) => x is T) | ((x: unknown) => boolean);
+type Conversion<U extends unknown, T extends unknown> = (x: unknown) => T;
 
 type Type = Constructor<unknown> | ConstructorLike<unknown> | null | undefined | Object;
 

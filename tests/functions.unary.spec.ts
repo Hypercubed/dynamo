@@ -103,7 +103,7 @@ class T {
   }
 }
 
-test('throws for unknwon type', t => {
+test('throws for unknown type', t => {
   t.throws(() => {
     const fn = typed.function(T);
   }, 'Unknown type "UnknownType"');
