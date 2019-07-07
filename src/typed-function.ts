@@ -66,14 +66,14 @@ class DefaultTypes {
   }
 }
 
-interface TypedOptions {
-  types?: Constructor<unknown>;
-  autoadd: boolean;
-}
-
 interface ConversionMethod {
   fromType: Type;
   convert: Conversion<unknown, unknown>;
+}
+
+interface TypedOptions {
+  types: any;
+  autoadd: boolean;
 }
 
 const defaultOptions: TypedOptions = {
@@ -82,12 +82,10 @@ const defaultOptions: TypedOptions = {
 };
 
 export class Typed {
-  protected options: TypedOptions;
-
   private guards = new WeakMap<Type, Array<Guard<unknown>>>();
   private conversions = new WeakMap<Type, ConversionMethod[]>();
 
-  constructor(options?: TypedOptions) {
+  constructor(private options?: Partial<TypedOptions>) {
     this.options = {
       ...defaultOptions,
       ...options
@@ -237,13 +235,6 @@ export class Typed {
   }
 
   private _getGuard(type: Type): Guard<unknown> {
-    if (type === null) {
-      return DefaultTypes.isNull;
-    }
-    if (type === undefined) {
-      return DefaultTypes.isUndefined;
-    }
-
     if (!this.guards.has(type)) {
       if (!this.options.autoadd) {
         throw new TypeError(`Unknown type "${getName(type)}"`);
@@ -268,7 +259,8 @@ export class Typed {
       const type = map[key] || ctor;
       const existing = this.guards.get(type) || [];
       const method = ctor[key];
-      this.guards.set(type, [ ...existing, method ]);
+      const guards = [ ...existing, method ];
+      this.guards.set(type, guards);
     }
   }
 

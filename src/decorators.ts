@@ -2,6 +2,13 @@ export const META_METHODS = Symbol('ts-typed-function:params');
 export const META_GUARDS = Symbol('ts-typed-function:guards');
 export const META_CONVERSIONS = Symbol('ts-typed-function:guards');
 
+class Null {
+  static isNull(x: unknown): x is null {
+    return x === null;
+  }
+}
+guard()(Null, 'isNull');
+
 // A Parameter is a array of types
 export type Parameter = Type[];
 
@@ -25,7 +32,10 @@ export function signature(...paramTypes: Array<Type | Parameter>) {
       }
 
       // Converts types to a Signature
-      const newSignature = paramTypes.map(t => Array.isArray(t) ? t : [t]);
+      const newSignature = paramTypes.map(t => {
+        if (t === null) t = Null;
+        return Array.isArray(t) ? t : [t];
+      });
 
       // Convert each parameter type into an array to types
       let map: SignatureMap = Reflect.getMetadata(META_METHODS, target) || {};
@@ -69,6 +79,9 @@ export function conversion(fromType?: Type, toType?: Type) {
       }
       toType = toType || Reflect.getMetadata('design:returntype', target, key) || '';
 
+      if (fromType === null) fromType = Null;
+      if (toType === null) toType = Null;
+
       let map: ConversionMap = Reflect.getMetadata(META_CONVERSIONS, target) || {};
 
       map = {
@@ -92,6 +105,9 @@ export function guard(type?: Type) {
   if (typeof Reflect !== 'object') {
     throw new Error('reflect-metadata not found');
   }
+
+  if (type === null) type = Null;
+
   return (target: any, key: string) => {
     let map: GuardMap = Reflect.getMetadata(META_GUARDS, target) || {};
 
