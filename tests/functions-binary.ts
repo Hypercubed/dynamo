@@ -1,7 +1,7 @@
 import test from 'ava';
 import { assert, IsExact, Has } from 'conditional-type-checks';
 
-import { Typed, signature } from '../src/';
+import { Typed, signature } from '../src';
 
 const typed = new Typed();
 

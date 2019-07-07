@@ -1,5 +1,5 @@
 import test from 'ava';
-import { Typed, signature, conversion, guard, Unknown } from '../src/';
+import { Typed, signature, conversion, guard, Unknown } from '../src';
 
 const typed = new Typed();
 

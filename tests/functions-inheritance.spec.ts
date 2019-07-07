@@ -1,7 +1,7 @@
 import test from 'ava';
 import { assert, IsExact, Has } from 'conditional-type-checks';
 
-import { Typed, signature } from '../src/';
+import { Typed, signature, guard, Unknown } from '../src';
 
 const typed = new Typed();
 
@@ -37,7 +37,7 @@ test('has the correct signature', t => {
   t.is(b.length, 1);
 });
 
-test('inherit', t => {
+test('functions inherit', t => {
   t.is(a('42'), 'the string 42');
 
   t.is(b(42), 'the number 42');

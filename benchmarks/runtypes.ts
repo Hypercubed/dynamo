@@ -2,8 +2,6 @@ import * as assert from 'assert';
 import * as suite from 'chuhai';
 
 import { String, Runtype, Static } from 'runtypes';
-import { create } from 'runtypes/lib/runtype';
-import { ValidationError } from 'runtypes/lib/errors';
 
 const base = (x: unknown): x is string => {
   return typeof x === 'string';

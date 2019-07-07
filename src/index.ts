@@ -1,3 +1,3 @@
-export * from './lib/typed-function';
-export * from './lib/decorators';
-export * from './lib/guardtypes';
+export * from './typed-function';
+export * from './decorators';
+export * from './guardtypes';

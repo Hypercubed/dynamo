@@ -6,7 +6,7 @@ import {
   META_METHODS, META_GUARDS, META_CONVERSIONS,
   SignatureMap, GuardMap, ConversionMap, Parameter
 } from './decorators';
-import { union, tuple, matcher, choose, Unknown } from './guardtypes';
+import { union, tuple, matcher, choose, intersect, Unknown } from './guardtypes';
 
 const I = (x: unknown) => x;
 
@@ -32,7 +32,7 @@ class DefaultTypes {
   }
 
   @guard(Array)
-  static isArray(x: unknown): boolean {
+  static isArray(x: unknown): x is any[] {
     return Array.isArray(x);
   }
 
@@ -62,13 +62,14 @@ class DefaultTypes {
   }
 
   @guard(Unknown)
-  static isUnknown(x: unknown): boolean {
+  static isUnknown(x: unknown): x is unknown {
     return true;
   }
 }
 
 interface TypedOptions {
   types?: Constructor<unknown>;
+  autoadd: boolean;
 }
 
 type Conversion = (x: unknown) => unknown;
@@ -78,15 +79,26 @@ interface ConversionMethod {
   convert: Conversion;
 }
 
+const defaultOptions: TypedOptions = {
+  types: DefaultTypes,
+  autoadd: false
+};
+
 export class Typed {
-  private guards = new WeakMap<Type, Guard<unknown>>();
+  protected options: TypedOptions;
+
+  private guards = new WeakMap<Type, Array<Guard<unknown>>>();
   private conversions = new WeakMap<Type, ConversionMethod[]>();
 
-  constructor(options: TypedOptions = {}) {
-    this.add(options.types || DefaultTypes);
+  constructor(options?: TypedOptions) {
+    this.options = {
+      ...defaultOptions,
+      ...options
+    };
+    this.add(this.options.types);
   }
 
-  add(...ctors: Array<Constructor<unknown>>) {
+  add(...ctors: Type[]) {
     ctors.forEach(c => {
       this._addTypes(c);
       this._addConversions(c);      
@@ -133,9 +145,8 @@ export class Typed {
 
   private _makeFunction(sequence: Array<[Guard<unknown>, any]>, minLength: number, maxLength: number): any {
     // Todo Optimizations:
-    // optimize runtype guards
     // When min = max, skip spread?
-    // Detect when max length == 1, skip tuples
+    // Detect when max length == 1, skip tuples?
     // Detect when there are no conversions, skip matchers
     // optimized functions for sigs < 6, skip choose
 
@@ -151,7 +162,7 @@ export class Typed {
       };
     }
 
-    const m = choose<any>(sequence);
+    const m = choose<{ method: AnyFunction, converters: any[]}>(sequence);
     return function(...args: unknown[]) {
       const { method, converters } = m(args);
       for (const i in converters) {
@@ -225,32 +236,44 @@ export class Typed {
     }
 
     if (!this.guards.has(type)) {
-      throw new TypeError(`Unknown type "${getName(type)}"`);
+      if (!this.options.autoadd) {
+        throw new TypeError(`Unknown type "${getName(type)}"`);
+      }
+      this._addTypes(type);
     }
-    return this.guards.get(type);
+    const guards = this.guards.get(type);
+    return intersect(guards);
   }
 
-  private _addTypes(ctor: Constructor<unknown>) {
-    const map: GuardMap = Reflect.getMetadata(META_GUARDS, ctor) || {};
+  private _addTypes(ctor: Type) {
+    const map: GuardMap = Reflect.getMetadata(META_GUARDS, ctor);
+
+    if (!map) {
+      if (this.options.autoadd && typeof ctor === 'function') {
+        this.guards.set(ctor, [(x: unknown) => x instanceof ctor]);
+      }
+      return;
+    }
+
     for (const key in map) {
-      const type = map[key];
+      const type = map[key] || ctor;
+      const existing = this.guards.get(type) || [];
       const method = ctor[key];
-      // TODO: error if adding a guard for the same type
-      this.guards.set(type, method);
+      this.guards.set(type, [ ...existing, method ]);
     }
   }
 
-  private _addConversions(ctor: Constructor<unknown>) {
+  private _addConversions(ctor: Type) {
     const map: ConversionMap = Reflect.getMetadata(META_CONVERSIONS, ctor) || {};
     for (const key in map) {
       const { fromType, toType } = map[key];
       const existing = this.conversions.get(toType) || [];
-      const d = { 
+      const conversion = { 
         fromType,
         convert: ctor[key]
       };
-      // TODO: error if adding the smae conversion
-      this.conversions.set(toType, [ ...existing, d ]);
+      // TODO: error if adding the same conversion
+      this.conversions.set(toType, [ ...existing, conversion ]);
     }
   }
 }

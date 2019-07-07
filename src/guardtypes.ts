@@ -1,20 +1,11 @@
 import { guard } from './decorators';
 
-export function create<T>(_guard: Guard<T>, _name?: string) {
-  class GuardToken {
-    static guard = _guard;
+export class Unknown {
+  @guard()
+  static isUnknown(x: unknown): x is unknown {
+    return true;
   }
-
-  if (_name) {
-    Object.defineProperty(GuardToken, 'name', { value: _name });
-  }
-  
-  guard()(GuardToken, 'guard');
-  return GuardToken;
 }
-
-// tslint:disable-next-line:variable-name
-export const Unknown = create<any>((x: unknown): x is any => true, 'Unknown');
 
 export function union(guards: Array<Guard<unknown>>) {
   return (x: unknown): boolean => {
@@ -59,7 +50,11 @@ export function choose<Z>(cases: Array<[any, Z]>): (x: any) => Z {
   };
 }
 
-function intersect(guards: Array<Guard<unknown>>): any {
+export function intersect(guards: Array<Guard<unknown>>): Guard<unknown> {
+  // Optimization for special case when array has length === 1
+  if (guards.length === 1) {
+    return guards[0];
+  }
   return (x: unknown): any => {
     for (let i = 0; i < guards.length; i++) {
       if (!guards[i](x)) return false;

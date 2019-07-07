@@ -1,22 +1,20 @@
 import test from 'ava';
-import { assert, IsExact } from 'conditional-type-checks';
+import { assert, IsExact, Has } from 'conditional-type-checks';
 
 import { Typed, signature, guard } from '../src';
 
 const typed = new Typed();
 
-type INonEmptyString =  string;
-class NonEmptyString {
+class Name extends String {
   @guard()
-  static isNonEmptyString(x: INonEmptyString) {
+  static isNonEmptyString(x: string) {
     return x.length > 0;
   }
 }
 
-type IPositive =  number;
-class Positive {
+class Age extends Number {
   @guard()
-  static isInt(n: IPositive) {
+  static isInt(n: number) {
     return Number.isInteger(n) && n >= 0;
   }
 }
@@ -27,20 +25,31 @@ class Person {
     return p instanceof Person;
   }
 
-  constructor(public name: string, public age: number) {
+  readonly kind = '$person';
+
+  constructor(public name: Name, public age: Age) {
   }
 }
 
-typed.add(NonEmptyString, Positive, Person);
+typed.add(Name, Age, Person);
 
 class CreatePerson {
-  @signature(NonEmptyString, Positive)
-  person(name: INonEmptyString, age: IPositive): Person {
+  @signature()
+  person(name: Name, age: Age): Person {
     return new Person(name, age);
   }
 }
 
 const createPerson = typed.function(CreatePerson);
+
+test('types are correct', t => {
+  assert<Has<number, Age>>(true);
+  assert<Has<string, Name>>(true);
+
+  assert<Has<string, Age>>(false);
+  assert<Has<number, Name>>(false);
+  t.pass();
+});
 
 test('example', t => {
   assert<IsExact<typeof createPerson, (name: string, age: number) => Person>>(true);
@@ -61,12 +70,12 @@ test('example', t => {
   const mike = createPerson('Mike', 45);
   assert<IsExact<typeof mike, Person>>(true);
 
-  t.deepEqual({ ...mike }, { name: 'Mike', age: 45 });    // ok
+  t.deepEqual({ ...mike }, { name: 'Mike', age: 45, kind: '$person' });    // ok
 });
 
 class GetName {
   @signature()
-  getName(person: Person): NonEmptyString {
+  getName(person: Person): Name {
     return person.name;
   }
 }
@@ -74,11 +83,16 @@ class GetName {
 const getName = typed.function(GetName);
 
 test('getName', t => {
-  assert<IsExact<typeof getName, (person: Person) => NonEmptyString>>(true);
+  assert<IsExact<typeof getName, (person: Person) => Name>>(true);
 
   t.throws(() => {
     // @ts-ignore
     getName(45);
+  }, 'No alternatives were matched');
+
+  t.throws(() => {
+    // @ts-ignore
+    getName({ name: 'Mike', age: 45 });
   }, 'No alternatives were matched');
 
   const mike = createPerson('Mike', 45);

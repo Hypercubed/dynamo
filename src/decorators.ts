@@ -93,13 +93,11 @@ export function guard(type?: Type) {
     throw new Error('reflect-metadata not found');
   }
   return (target: any, key: string) => {
-    type = type || target;
-
     let map: GuardMap = Reflect.getMetadata(META_GUARDS, target) || {};
 
     map = {
       ...map,
-      [key]: type
+      [key]: type  // undefined if target is the type
     };
 
     Reflect.defineMetadata(META_GUARDS, map, target);
