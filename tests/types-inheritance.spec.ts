@@ -8,6 +8,10 @@ const typed = new Typed();
 class Integer extends Number {
   @guard()
   static isInteger(x: unknown): x is Integer {
+    // isNumber check is not attached to Number.
+    /* if (typeof x !== 'number') {
+      throw new Error('Should never be here, isNumber runs first!!');
+    } */
     return typeof x === 'number' && Number.isInteger(x);
   }
 }
@@ -139,6 +143,11 @@ test('parity', t => {
   t.is(parity(0), `0 is even`);
   t.is(parity(10), `10 is even`);
   t.is(parity(11), `11 is odd`);
+
+  t.throws(() => {
+    // @ts-ignore
+    parity('10');    
+  }, 'No alternatives were matched');
 });
 
 test('name', t => {

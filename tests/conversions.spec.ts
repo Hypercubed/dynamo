@@ -1,5 +1,5 @@
 import test from 'ava';
-import { Typed, signature, conversion, guard, Unknown } from '../src';
+import { Typed, signature, conversion, guard, Any } from '../src';
 
 const typed = new Typed();
 
@@ -41,7 +41,7 @@ class Fn1 {
     return a.inspect();
   }
 
-  @signature(Unknown)
+  @signature(Any)
   other(a: any): string {
     return `value ${a} is unknown`;
   }

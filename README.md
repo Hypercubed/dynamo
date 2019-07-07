@@ -1,47 +1,28 @@
 # ts-typed-function
 
-Typed-functions in TS using decorators
+Typed-functions in TypeScript using decorators
 
 ## Introduction
 
-[josdejong/typed-function](https://github.com/josdejong/typed-function) provides a flexible and organized way to do run-time type checking and overloading in JavaScript.  `ts-typed-function` is an experimental TypeScript wrapper on top of `typed-function`.
-
-`typed-function` has the following features:
-
-* Runtime type-checking of input arguments.
-* Automatic type conversion of arguments.
-* Compose typed functions with multiple signatures.
+* Runtime type-checking of function arguments based on TypeScript types.
+* Compose multiple function signatures into a correctly typed function.
+* Define up-conversion of types.
 * Supports union types, any type, and variable arguments.
-* Detailed error messaging.
 
-`ts-typed-function` adds the following:
-
-* Typed function signatures from TypeScript types.
-* Appropriate TS types for typed functions.
-* Types and type conversions can be added from the class
-
-## TLDR `ts-typed-function` Usage
+## TLDR Usage
 
 ```ts
-import { Typed, guard, conversion, signature } from 'ts-typed-function';
+import { Typed, guard, conversion, signature, Any } from 'ts-typed-function';
 
-// Create a new, isolated instance of ts-typed-function.
 const typed = new Typed();
 
-// This is a typical  TS class definition
 class Complex {
 
-  // The `@guard` decorator is used to determine idenity of this class at runtime
-  // By default a guard is a test for the containing class
-  // in this case this is a runtime test for the `Complex` type
   @guard()
   static isComplex(a: any): a is Complex {
     return a instanceof Complex;
   }
 
-  // The `@conversion` decorator defines a method for converting one type into another
-  // ts-typed-function uses the TS types to determine the conversion
-  // in this case from a `number` to a `Complex` class instance
   @conversion()
   static fromNumber(a: number): Complex {
     return new Complex(a, 0);
@@ -49,168 +30,275 @@ class Complex {
 
   constructor(public re: number, public im: number) {}
 
-  times(b: Complex): Complex {
-    return new Complex(this.re * b.re - this.im * b.im, this.re * b.im + this.re * b.im);
+  add(b: Complex): Complex {
+    const re = this.re + b.re;
+    const im = this.re + b.im;
+    return new Complex(re, im);
   }
 }
 
-// Once added to the ts-typed-function instance the type and conversions are defined
 typed.add(Complex);
 
-// This class is a `ts-typed-function` function definition
-class Times {
-  // the resulting function will have this name
-  // Default is the class name
-  name: 'times';
+class Add {
+  name: 'add';
 
-  // The `@signature` decorator defines a signiture for typed-function
-  // The types are infered from the TS types, in this case `Number, Number`
-  // This method is only invoked if both inputs are `number`s.
   @signature()
   number(a: number, b: number): number {
-    return a * b;
+    return a + b;
   }
 
-  // This is a TS override so for the `complex` method defined below
-  // This is necessary to get a properly typed ts-typed-function
   complex(a: number | Complex, b: number | Complex): Complex;
 
-  // The `@signature` decorator defines a signiture for typed-function
-  // The types are infered from the TS compile time types, in this case (`Complex, Complex`)
-  // This method is invoked if both inputs are `Complex`
-  // The conversion from `number` to Complex (defined above) will allow 
-  // `numbers` to be converted to `Complex` before this is invoked
   @signature()
   complex(a: Complex, b: Complex): Complex {
-    return a.times(b);
+    return a.add(b);
   }
 }
 
-// Generates the typoed function
-// The TS definition of this function is the intersection of all methods (and overrides) on the `Times` class
-// In this case `((a: number, b: number) => number) & (a: number | Complex, b: number | Complex) => Complex)`
+// typed as `((number, number) => number) & ((number | Complex, number | Complex) => Complex)`
 const times = typed.function(Times);
 
-// returns 18, with TS compile-time type of `number`
-times(3, 6);
+add(3, 6);  // 9
+add(new Complex(3, 0), new Complex(0, 6));  // Complex(3, 6)
+times(3, new Complex(0, 6));                // Complex(3, 6)
 
-// returns the complex number (18i) with TS compile time type of `Complex`
-times(new Complex(3, 0), new Complex(0, 6));
-
-// returns the complex number (18i) with TS compile time type of `Complex`
-times(3, new Complex(0, 6));
-
-// TS doesn't allow passing a `number, string` to the times function at compile time
-// typed-function would throw a TypeError at runtime
 // @ts-ignore
-times(3, '6');
+times(3, '6');  // TypeError
 ```
 
 ## Usage Explanation
 
-### `typed-function` in TypeScript without ts-typed-function
+### Typed instance
 
-```js
-import * as typed from 'typed-function';
+Start by creating a `typed` environment.  Types and conversions are local to this instance.
 
+```ts
+import { Typed, guard, conversion, signature, Any } from 'ts-typed-function';
+
+const typed = new Typed();
+```
+
+### Signatures
+
+Typed-functions are defined using a class with one or more `signature` decorators and the `typed.function` method.
+
+```ts
+class Add {
+  @signature()
+  str(a: string, b: string): string {
+    return a + ' ' + b;
+  }
+
+  @signature()
+  num(a: number, a: number): number {
+    return a + b;
+  }
+}
+
+// correctly typed as `((a: string, a: string) => string & (a: number, a: number) => number)`
+const add = typed.function(Add);
+
+add(20, 22);             // 42
+add('Hello', 'World');   // "Hello World"
+
+// @ts-ignore
+add('Hello', 42);  // TypeError
+```
+
+This library uses metadata reflections to infer types from the TypeScript signatures.  Since TypeScript only supports [basic type serialization](http://blog.wolksoftware.com/decorators-metadata-reflection-in-typescript-from-novice-to-expert-part-4#3-basic-type-serialization_1) only basic types can be inferred.  Basic types defined by default are the primitives `number`, `string`, `boolean` and the constructors `Array`, `Function`, `Date`, and `RegExp`.  Types that are class constructors are are also supported but must be defined (see types below).  Other types (including `any`, `unknown`, union types, and interfaces) are treated as `Object`.  To support more complex types the input parameter signatures must be supplied to the `signature` decorator.
+
+For type unions use an array.  When listing explicit signatures for primitives used the built-in constructors.
+
+```ts
+class Add {
+  @signature(String, [Number, String])
+  add(a: string, b: number | string): string {
+    return '' + a + ' ' + b;
+  }
+
+  @signature()
+  add(a: number, b: number): string {
+    return a + b;
+  }
+}
+
+// correctly typed as `((a: string, b: number | string) => string) & (a: number, a: number) => number)`
+const add = typed.function(Add);
+
+add(20, 22);            // 42
+add('Hello', 'World');  // 'Hello World'
+add('Hello', 42);       // 'Hello 42'
+
+// @ts-ignore
+add(20, 'World');       // TypeError
+```
+
+TypeScript serializes both `undefined` and `null` as `void 0`, so these types should be explicitly listed in the signature.  Use the predefined class `Any` for `unknown` or `any`.
+
+```ts
+class Inspect {
+  @signature(undefined)
+  u(a: undefined): string {
+    return 'a is undefined';
+  }
+
+  @signature(null)
+  n(a: null): string {
+    return 'a is null';
+  }
+
+  @signature(Any)
+  n(a: unknown): string {
+    return 'a is something';
+  }
+}
+
+// correctly typed as `((a: undefined) => string & (a: null) => string & (a: unknown) => string)`
+const inspect = typed.function(Inspect);
+
+inspect(undefined); // 'a is undefined'
+inspect(null);      // 'a is null'
+inspect('string');  // 'a is something'
+```
+
+Signatures are inherited:
+
+```ts
+class AddNumber {
+  @signature()
+  num(a: number, a: number): number {
+    return a + b;
+  }
+}
+
+class AddStrings extends AddNumber {
+  @signature(String, [Number, String])
+  add(a: string, b: number | string): string {
+    return '' + a + ' ' + b;
+  }
+}
+
+// has the type of `((a: number, a: number) => number) & ((a: string, b:  number | string) => string)`
+const add = typed.function(Print);  
+
+add(20, 22);            // 42
+add('Hello', 'World');  // 'Hello World'
+add('Hello', 42);       // 'Hello 42'
+
+// @ts-ignore
+add(20, 'World');       // TypeError
+```
+
+### Types
+
+Runtime types are added using the `@guard` decorator and the `typed.add` method.
+
+```ts
 class Complex {
+  @guard()
+  static isComplex(x: unknown): x is Complex {
+    return x instanceof Complex;
+  }
+}
+
+typed.add(Complex);
+```
+
+You can add runtime constraints to primitives by extending the primitive constructor.
+
+```ts
+class Integer extends Number {
+  @guard()
+  static isInteger(x: unknown): x is Integer {
+    return typeof x === 'number' && Number.isInteger(x);
+  }
+}
+
+typed.add(Integer);
+```
+
+Guards defined on classes are inherited.
+
+```ts
+class Even extends Integer {
+  @guard()
+  static isEven(x: number) {
+    // isInteger guard on `Integer` is invoked before isEven
+    return x % 2 === 0;
+  }
+}
+
+typed.add(Even);
+```
+
+### Conversions
+
+Runtime conversions are added using the `@conversion` decorator and the `add` method.
+
+```ts
+class Complex {
+  @guard()
   static isComplex(a: any): a is Complex {
     return a instanceof Complex;
   }
 
+  @conversion()
   static fromNumber(a: number): Complex {
     return new Complex(a, 0);
   }
 
   constructor(public re: number, public im: number) {}
-
-  times(b: Complex): Complex {
-    return new Complex(this.re * b.re - this.im * b.im, this.re * b.im + this.im * b.re);
-  }
 }
 
-// Tell `typed-function` how to determine the Complex class instance at runtime
-typed.addType({
-  name: 'Complex',
-  test: Complex.isComplex
-});
-
-// Tell `typed-function` how to coinvert a `number` to a `Complex`
-typed.addConversion({
-  from: 'number'
-  to: 'Complex',
-  convert: Complex.fromNumber
-});
-
-// create a typed function without type safety
-// The type in this case is `any`
-const times = typed({
-  'number, number': function (a: number, b: number) {
-    return a * b;
-  },
-  'Complex, Complex': function (a: Complex, b: Complex): Complex {
-    return a.times(b);
-  }
-});
-
-// returns 18 (typed as any)
-times(3, 6);
-
-// returns the complex number (18i) (typed as any)
-times(new Complex(3, 0), new Complex(0, 6));
-
-// returns the complex number (18i) (typed as any)
-times(3, new Complex(0, 6))
-
-// Typescript allows this
-// typed-function will throw a TypeError at runtime
-times(3, '6')
+typed.add(Complex);
 ```
 
-The resulting function has the same runtime behavior as the `ts-typed-function` above.  However, we notice three issues:
-
-1) The type and conversions for redundantly defined
-2) The function parameters are redundantly typed, once for TS and once for `typed-function`.
-3) The resulting function (`times`) has a TypeScript type of `any`, and therefore provides no type safety.
-
-### Explicit typing
-
-This library uses metadata reflections to infer types in the type signatures.  Since TypeScript only supports [basic type serialization](http://blog.wolksoftware.com/decorators-metadata-reflection-in-typescript-from-novice-to-expert-part-4#3-basic-type-serialization_1) only basic types can be inferred.  These basic types are `number`, `string`, `boolean`, `undefined`, `Array`, `Function`, `Date`, and `RegExp`.  Types that are class constructors are are also supported.  Other types (including `any`, union types, and interfaces) are treated as `Object` for `typed-function`.  To support more complex types the input parameter signatures must be supplied to the `signature` decorator class constructors.
+When defining the function add an override to the type to get the correct signature, ts-typed-function will handle the conversion.
 
 ```ts
-class Fn {
-  @signature([Number, String], Number)
-  num(a: number | string, b: number): any {
-    return +a + b;
+class add {
+  name = 'add';
+
+  add(a: number | Complex, b: number | Complex);
+
+  @signature()
+  add(a: Complex, b: Complex): Complex {
+    return a.abb(b);
   }
 }
 
-const fn = typed.function(Fn);
+// typed as (a: number | Complex, b: number | Complex) => Complex
+const add = typed.function(Add);
 ```
 
-### Inheritance
-
-Signatures are inherited:
+Function methods are evaluated with priority from top to bottom.
 
 ```ts
-class PrintComplex {
+class add {
+  name = 'add';
+
   @signature()
-  complex(x: Complex): string {
-    return `(${x.re}, ${x.im})`;
+  complex(a: number, b: number): number {
+    return a + b;
+  }
+
+  complex(a: number | Complex, b: number | Complex);
+
+  @signature()
+  complex(a: Complex, b: Complex): Complex {
+    return a.abb(b);
   }
 }
 
-class Print extends PrintComplex {
-  @signature()
-  number(x: number): string {
-    return '' + x;
-  }
-}
+// typed as `((a: number, b: number) => number & (a: number | Complex, b: number | Complex) => Complex)`
+const add = typed.function(Add);
 
-const print = typed.function(Print);
+add(20, 22);                                  // 42
+add(new Complex(20, 0), new Complex(0, 22));  // Complex(20, 22)
+times(20, new Complex(0, 22));                // Complex(20, 22)
 
-print(42);                   // outputs "42"
-print(new Complex(3,1));     // outputs "(3, 1)"
+// @ts-ignore
+times(20, '22');  // TypeError
 ```
 
 # License

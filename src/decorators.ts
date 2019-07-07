@@ -2,20 +2,7 @@ export const META_METHODS = Symbol('ts-typed-function:params');
 export const META_GUARDS = Symbol('ts-typed-function:guards');
 export const META_CONVERSIONS = Symbol('ts-typed-function:guards');
 
-export class Null {
-  static isNull(x: unknown): x is null {
-    return x === null;
-  }
-}
-
-export class Undefined {
-  static isUndefined(x: undefined): x is null {
-    return typeof x === 'undefined';
-  }
-}
-
-guard()(Null, 'isNull');
-guard()(Undefined, 'isUndefined');
+import { fixType } from './types';
 
 // A Parameter is a array of types
 export type Parameter = Type[];
@@ -33,8 +20,6 @@ export function signature(...paramTypes: Array<Type | Parameter>) {
     throw new Error('reflect-metadata not found');
   }
 
-  paramTypes = arguments.length > 0 ? paramTypes.map(t => fixType(t)) : paramTypes;
-
   return (target: any, key: string) => {
     if (typeof target[key] === 'function') {
       if (paramTypes.length < 1) {
@@ -42,20 +27,18 @@ export function signature(...paramTypes: Array<Type | Parameter>) {
       }
 
       // Converts types to a Signature
-      const newSignature = paramTypes.map(t => {
-        return Array.isArray(t) ? t : [t];
-      });
+      const _signature = paramTypes.map(t => Array.isArray(t) ? t : [t]);
 
       // Convert each parameter type into an array to types
       let map: SignatureMap = Reflect.getMetadata(META_METHODS, target) || {};
-      const existingSignatures = map[key] || [];
+      const existing = map[key] || [];
 
-      // note: new newSignature are added ahead of existingSignatures
+      // note: new new signatures are added ahead of existingSignatures
       // decorators are process top to bottom in a class
-      // but bottom to top per key
+      // but bottom to top per method
       map = {
         ...map,
-        [key]: [ newSignature, ...existingSignatures ]  // note: new siginatures are 
+        [key]: [ _signature, ...existing ]  // note: new siginatures are 
       };
 
       Reflect.defineMetadata(META_METHODS, map, target);
@@ -114,7 +97,11 @@ export function guard(type?: Type) {
     throw new Error('reflect-metadata not found');
   }
 
-  type = arguments.length > 0 ? fixType(type) : undefined;
+  // Ensure undefined and null are handled
+  // if arguments.length < 1, type === undefined, which means target is the ctor
+  if (arguments.length === 1) {
+    type = fixType(type);
+  }
 
   return (target: any, key: string) => {
     let map: GuardMap = Reflect.getMetadata(META_GUARDS, target) || {};
@@ -126,11 +113,4 @@ export function guard(type?: Type) {
 
     Reflect.defineMetadata(META_GUARDS, map, target);
   };
-}
-
-function fixType(x: Type): Type {
-  if (arguments.length === 0) return;
-  if (x === null) return Null;
-  if (typeof x === 'undefined') return Undefined;
-  return x;
 }

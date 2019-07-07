@@ -1,5 +1,5 @@
 import test from 'ava';
-import { signature, Typed, Unknown, Undefined } from '../src';
+import { signature, Typed, Any } from '../src';
 
 const typed = new Typed();
 
@@ -40,7 +40,6 @@ class Fn {
     return `${x} is a RegExp`;
   }
 
-  // Does null get serialized??
   @signature(null)
   isNull(x: null): string {
     return `${x} is a null`;
@@ -56,9 +55,9 @@ class Fn {
     return `${x} is an object`;
   }
 
-  @signature(Unknown)
-  isUnknown(x: any): string {
-    return `${x} is an Unknown`;
+  @signature(Any)
+  isAny(x: any): string {
+    return `${x} is an something`;
   }
 }
 
@@ -75,5 +74,49 @@ test('default types', t => {
   t.is(fn(null), 'null is a null');
   t.is(fn(undefined), 'undefined is a undefined');
   t.is(fn({}), '[object Object] is an object');
-  t.is(fn(new Fn()), '[object Object] is an Unknown');
+  t.is(fn(new Fn()), '[object Object] is an something');
+});
+
+class Fn2 {
+  @signature([String, Number])
+  isNumber(x: string | number): string {
+    return `${x} is a string or number`;
+  }
+
+  @signature()
+  isArray(x: [string, number]): string {
+    return `[${x}] is an Array`;
+  }
+}
+
+const fn2 = typed.function(Fn2);
+
+test('complex default types', t => {
+  t.is(fn2(42), '42 is a string or number');
+  t.is(fn2('42'), '42 is a string or number');
+  t.is(fn2(['42', 42]), '[42,42] is an Array');
+
+  // @ts-ignore
+  t.is(fn2(['42', true]), '[42,true] is an Array');
+});
+
+class Fn3 {
+  @signature([String, undefined])
+  isNumber(x: string | undefined): string {
+    return `${x} is a string or undefined`;
+  }
+
+  @signature([Number, null])
+  isArray(x: number | null): string {
+    return `${x} is a number or null`;
+  }
+}
+
+const fn3 = typed.function(Fn3);
+
+test('complex default types with null and undefined', t => {
+  t.is(fn3('42'), '42 is a string or undefined');
+  t.is(fn3(undefined), 'undefined is a string or undefined');
+  t.is(fn3(42), '42 is a number or null');
+  t.is(fn3(null), 'null is a number or null');
 });

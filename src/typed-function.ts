@@ -3,11 +3,14 @@ import 'reflect-metadata';
 import {
   guard,
   META_METHODS, META_GUARDS, META_CONVERSIONS,
-  SignatureMap, GuardMap, ConversionMap, Parameter,
-  Undefined
+  SignatureMap, GuardMap, ConversionMap, Parameter
 } from './decorators';
-import { union, tuple, matcher, choose, intersect, applier, Unknown } from './guardtypes';
-const I = (x: unknown) => x;
+import { union, tuple, matcher, choose, intersect, applier } from './guards';
+import { Any, Undefined, Null, fixType } from './types';
+
+guard()(Any, 'isAny');
+guard()(Undefined, 'isUndefined');
+guard()(Null, 'isNull');
 
 class DefaultTypes {
   @guard(Number)
@@ -60,8 +63,8 @@ class DefaultTypes {
     return typeof x === 'object' && x !== null && x.constructor === Object;
   }
 
-  @guard(Unknown)
-  static isUnknown(x: unknown): x is unknown {
+  @guard(Any)
+  static isAny(x: unknown): x is unknown {
     return true;
   }
 }
@@ -144,6 +147,7 @@ export class Typed {
 
     if (maxLength === 0) {
       // Special case when the function is a nullary
+      // no guards or conversions possible
       // not very usefull anyway
       return function() {
         if (arguments.length > 0) {
@@ -207,8 +211,9 @@ export class Typed {
    * 
    */
   private _convertParamToUnion(types: Type[]): [Guard<unknown>, Conversion<unknown, unknown>] {
-    const { length } = types;
-    const converters: Array<Conversion<unknown, unknown>> = types.map(() => I);
+    const len = types.length;
+    // @ts-ignore
+    const converters: Array<Conversion<unknown, unknown>> = types.map(() => null);
 
     types.forEach(toType => {
       const conversions = this.conversions.get(toType) || [];
@@ -220,21 +225,14 @@ export class Typed {
       });
     });
 
-    const noConversions = length === types.length;
-
     const guards = types.map(t => this._getGuard(t));
-
     const _union = union(guards);
-
-    if (noConversions) {
-      return [_union, null];
-    }
-    
     const _match = matcher(guards, converters);
     return [_union, _match];
   }
 
   private _getGuard(type: Type): Guard<unknown> {
+    type = fixType(type);
     if (!this.guards.has(type)) {
       if (!this.options.autoadd) {
         throw new TypeError(`Unknown type "${getName(type)}"`);

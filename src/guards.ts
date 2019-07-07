@@ -1,14 +1,3 @@
-import { guard } from './decorators';
-
-const I = (x: unknown) => x;
-
-export class Unknown {
-  @guard()
-  static isUnknown(x: unknown): x is unknown {
-    return true;
-  }
-}
-
 export function union(guards: Array<Guard<unknown>>) {
   const len = guards.length;
   if (len === 1) {
@@ -24,15 +13,38 @@ export function union(guards: Array<Guard<unknown>>) {
   };
 }
 
+/**
+ * Returns a function that applies the first converter to the first matching guard
+ */
 export function matcher(
   guards: Array<Guard<unknown>>,
   converters: Array<Conversion<unknown, unknown>>
 ): Conversion<unknown, unknown> {
   const len = guards.length;
+
+  const hasConversions = len > 0 && converters.length <= len && converters.some(Boolean);
+
+  if (!hasConversions) {
+    // optimization when there are no guards or converters
+    return null;
+  }
+
+  if (len === 1) {
+    // optimization when length is one
+    const g0 = guards[0];
+    const c0 = converters[0];
+    return (x: unknown) => {
+      if (g0(x)) c0(x);
+    };
+  }
+
   return (x: unknown) => {
     let i = -1;
     while (++i < len) {
-      if (guards[i](x)) return converters[i](x);
+      if (guards[i](x)) {
+        if (converters[i]) return converters[i](x);
+        return x;
+      }
     }
   };
 }
@@ -90,6 +102,9 @@ export function intersect(guards: Array<Guard<unknown>>): Guard<unknown> {
   };
 }
 
+/**
+ * Returns a function that applies each converter to each element in an array
+ */
 export function applier(converters: Array<Conversion<unknown, unknown>>): Conversion<unknown[], unknown[]> {
   const len = converters.length;
 

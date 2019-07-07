@@ -1,3 +1,4 @@
 export * from './typed-function';
 export * from './decorators';
-export * from './guardtypes';
+export * from './guards';
+export * from './types';

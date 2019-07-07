@@ -7,3 +7,4 @@
 - [ ] test `null`, `regexp`, `undefined`, `object`, `any`?
 - [ ] add both plain object and any object
 - [ ] test no default types
+- [ ] Any vs Unknown?
