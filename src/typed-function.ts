@@ -3,10 +3,10 @@ import 'reflect-metadata';
 import {
   guard,
   META_METHODS, META_GUARDS, META_CONVERSIONS,
-  SignatureMap, GuardMap, ConversionMap, Parameter
+  SignatureMap, GuardMap, ConversionMap, Parameter,
+  Undefined
 } from './decorators';
 import { union, tuple, matcher, choose, intersect, applier, Unknown } from './guardtypes';
-
 const I = (x: unknown) => x;
 
 class DefaultTypes {

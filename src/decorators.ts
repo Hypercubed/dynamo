@@ -2,12 +2,20 @@ export const META_METHODS = Symbol('ts-typed-function:params');
 export const META_GUARDS = Symbol('ts-typed-function:guards');
 export const META_CONVERSIONS = Symbol('ts-typed-function:guards');
 
-class Null {
+export class Null {
   static isNull(x: unknown): x is null {
     return x === null;
   }
 }
+
+export class Undefined {
+  static isUndefined(x: undefined): x is null {
+    return typeof x === 'undefined';
+  }
+}
+
 guard()(Null, 'isNull');
+guard()(Undefined, 'isUndefined');
 
 // A Parameter is a array of types
 export type Parameter = Type[];
@@ -25,6 +33,8 @@ export function signature(...paramTypes: Array<Type | Parameter>) {
     throw new Error('reflect-metadata not found');
   }
 
+  paramTypes = arguments.length > 0 ? paramTypes.map(t => fixType(t)) : paramTypes;
+
   return (target: any, key: string) => {
     if (typeof target[key] === 'function') {
       if (paramTypes.length < 1) {
@@ -33,7 +43,6 @@ export function signature(...paramTypes: Array<Type | Parameter>) {
 
       // Converts types to a Signature
       const newSignature = paramTypes.map(t => {
-        if (t === null) t = Null;
         return Array.isArray(t) ? t : [t];
       });
 
@@ -64,6 +73,8 @@ export interface ConversionMap {
 }
 
 export function conversion(fromType?: Type, toType?: Type) {
+  const arglen = arguments.length;
+
   if (typeof Reflect !== 'object') {
     throw new Error('reflect-metadata not found');
   }
@@ -72,23 +83,20 @@ export function conversion(fromType?: Type, toType?: Type) {
     const method = target[key];
 
     if (typeof method === 'function') {
-      if (typeof fromType === 'undefined') {
+      if (arglen === 0) {
         const params = Reflect.getMetadata('design:paramtypes', target, key) || [];
         // TODO: throw if conversion has more than one input
         fromType = params[0] || '';
       }
       toType = toType || Reflect.getMetadata('design:returntype', target, key) || '';
 
-      if (fromType === null) fromType = Null;
-      if (toType === null) toType = Null;
-
       let map: ConversionMap = Reflect.getMetadata(META_CONVERSIONS, target) || {};
 
       map = {
         ...map,
         [key]: {
-          fromType,
-          toType
+          fromType: fixType(fromType),
+          toType: fixType(toType),
         }
       };
 
@@ -106,16 +114,23 @@ export function guard(type?: Type) {
     throw new Error('reflect-metadata not found');
   }
 
-  if (type === null) type = Null;
+  type = arguments.length > 0 ? fixType(type) : undefined;
 
   return (target: any, key: string) => {
     let map: GuardMap = Reflect.getMetadata(META_GUARDS, target) || {};
 
     map = {
       ...map,
-      [key]: type  // undefined if target is the type
+      [key]: type
     };
 
     Reflect.defineMetadata(META_GUARDS, map, target);
   };
+}
+
+function fixType(x: Type): Type {
+  if (arguments.length === 0) return;
+  if (x === null) return Null;
+  if (typeof x === 'undefined') return Undefined;
+  return x;
 }
