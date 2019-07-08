@@ -1,13 +1,15 @@
 # ts-typed-function
 
-Typed-functions in TypeScript using decorators
+Runtime function overloading in TypeScript using decorators
 
 ## Introduction
 
-* Runtime type-checking of function arguments based on TypeScript types.
 * Compose multiple function signatures into a correctly typed function.
+* Runtime type-checking of function arguments based on TypeScript types.
 * Define up-conversion of types.
-* Supports union types, any type, and variable arguments.
+* Supports union types, `any` type, and variable arguments.
+
+> Requires `experimentalDecorators` and `emitDecoratorMetadata` be enabled in your tsconfig.
 
 ## TLDR Usage
 

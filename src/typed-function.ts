@@ -140,7 +140,7 @@ export class Typed {
 
   private _makeFunction(sequence: Array<[Guard<unknown>, any]>, minLength: number, maxLength: number): any {
     // Todo Optimizations:
-    // When min = max, skip spread?
+    // When min = max, skip length checks?
     // optimized functions for sigs < 6, skip choose
 
     const [g0, [m0, c0]] = sequence[0];
