@@ -5,7 +5,7 @@ import {
   META_METHODS, META_GUARDS, META_CONVERSIONS,
   SignatureMap, GuardMap, ConversionMap, Parameter
 } from './decorators';
-import { union, tuple, matcher, choose, intersect, applier } from './guards';
+import { union, tuple, matcher, choose, intersect, mapper, id } from './guards';
 import { Any, Undefined, Null, fixType } from './types';
 
 guard()(Any, 'isAny');
@@ -160,36 +160,19 @@ export class Typed {
     if (sequence.length === 1) {
       // Special case when there is only one method
       return function(...args: unknown[]) {
-        if (g0(args)) {
-          if (c0) args = c0(args);
-          return m0.apply(this, args);
-        }
+        if (g0(args)) return m0.apply(this, c0(args));
         throw new TypeError('No alternatives were matched');
       };
     }
 
     const [g1, [m1, c1]] = sequence[1];
 
-    if (sequence.length === 2) {
-      // Special case when there are two methdos
-      return function(...args: unknown[]) {
-        if (g0(args)) {
-          if (c0) args = c0(args);
-          return m0.apply(this, args);
-        }
-        if (g1(args)) {
-          if (c1) args = c1(args);
-          return m1.apply(this, args);
-        }
-        throw new TypeError('No alternatives were matched');
-      };
-    }
-
-    const m = choose<[ AnyFunction, AnyFunction ]>(sequence);
+    const s = choose<[ AnyFunction, AnyFunction ]>(sequence.slice(2));
     return function(...args: unknown[]) {
-      const [ method, convert ] = m(args);
-      if (convert) args = convert(args);
-      return method.apply(this, args);
+      if (g0(args)) return m0.apply(this, c0(args));  // opt for len = 2
+      if (g1(args)) return m1.apply(this, c1(args));
+      const [ m, c ] = s(args);
+      return m.apply(this, c(args));
     };
   }
 
@@ -201,7 +184,7 @@ export class Typed {
     const guards = guardsAndMatchers.map(x => x[0]);
     const matchers = guardsAndMatchers.map(x => x[1]);
     const _tuple = tuple(guards);
-    const _convert = applier(matchers);
+    const _convert = mapper(matchers);
     return [_tuple, _convert];
   }
 
@@ -213,7 +196,7 @@ export class Typed {
   private _convertParamToUnion(types: Type[]): [Guard<unknown>, Conversion<unknown, unknown>] {
     const len = types.length;
     // @ts-ignore
-    const converters: Array<Conversion<unknown, unknown>> = types.map(() => null);
+    const converters: Array<Conversion<unknown, unknown>> = types.map(() => id);
 
     types.forEach(toType => {
       const conversions = this.conversions.get(toType) || [];
@@ -227,6 +210,12 @@ export class Typed {
 
     const guards = types.map(t => this._getGuard(t));
     const _union = union(guards);
+
+    if (types.length === len) {
+      // Optimization when no conversions were added
+      return [_union, id];
+    }
+
     const _match = matcher(guards, converters);
     return [_union, _match];
   }
