@@ -256,6 +256,8 @@ export class Typed {
     for (const key in map) {
       const { fromType, toType } = map[key];
       const existing = this.conversions.get(toType) || [];
+
+      // TODO: store guard instead of fromType to avoid a strong reference!!
       const conversion = { 
         fromType,
         convert: ctor[key]

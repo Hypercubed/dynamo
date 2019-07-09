@@ -1,5 +1,3 @@
-import { guard } from './decorators';
-
 export class Any {
   static isAny(x: unknown): x is unknown {
     return true;

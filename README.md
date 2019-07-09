@@ -1,12 +1,12 @@
 # ts-typed-function
 
-Runtime function overloading in TypeScript using decorators
+Runtime function overloading in TypeScript using decorators.  Easy to read and understand class definitions are converted to overloaded functions.  Avoids nasty runtime typechecking.
 
 ## Introduction
 
-* Compose multiple function signatures into a correctly typed function.
-* Runtime type-checking of function arguments based on TypeScript types.
-* Define up-conversion of types.
+* Compose multiple method signatures into a correctly typed function.
+* Runtime type-checking of function arguments based on TypeScript type signatures.
+* Defined types coercions.
 * Supports union types, `any` type, and variable arguments.
 
 > Requires `experimentalDecorators` and `emitDecoratorMetadata` be enabled in your tsconfig.
@@ -60,7 +60,7 @@ class Add {
 // typed as `((number, number) => number) & ((number | Complex, number | Complex) => Complex)`
 const times = typed.function(Times);
 
-add(3, 6);  // 9
+add(3, 6);                                  // 9
 add(new Complex(3, 0), new Complex(0, 6));  // Complex(3, 6)
 times(3, new Complex(0, 6));                // Complex(3, 6)
 
@@ -80,9 +80,11 @@ import { Typed, guard, conversion, signature, Any } from 'ts-typed-function';
 const typed = new Typed();
 ```
 
+Options TBR
+
 ### Signatures
 
-Typed-functions are defined using a class with one or more `signature` decorators and the `typed.function` method.
+Typed-functions are defined using a class with one or more `@signature` decorators and the `typed.function` method.
 
 ```ts
 class Add {
@@ -107,33 +109,7 @@ add('Hello', 'World');   // "Hello World"
 add('Hello', 42);  // TypeError
 ```
 
-This library uses metadata reflections to infer types from the TypeScript signatures.  Since TypeScript only supports [basic type serialization](http://blog.wolksoftware.com/decorators-metadata-reflection-in-typescript-from-novice-to-expert-part-4#3-basic-type-serialization_1) only basic types can be inferred.  Basic types defined by default are the primitives `number`, `string`, `boolean` and the constructors `Array`, `Function`, `Date`, and `RegExp`.  Types that are class constructors are are also supported but must be defined (see types below).  Other types (including `any`, `unknown`, union types, and interfaces) are treated as `Object`.  To support more complex types the input parameter signatures must be supplied to the `signature` decorator.
-
-For type unions use an array.  When listing explicit signatures for primitives used the built-in constructors.
-
-```ts
-class Add {
-  @signature(String, [Number, String])
-  add(a: string, b: number | string): string {
-    return '' + a + ' ' + b;
-  }
-
-  @signature()
-  add(a: number, b: number): string {
-    return a + b;
-  }
-}
-
-// correctly typed as `((a: string, b: number | string) => string) & (a: number, a: number) => number)`
-const add = typed.function(Add);
-
-add(20, 22);            // 42
-add('Hello', 'World');  // 'Hello World'
-add('Hello', 42);       // 'Hello 42'
-
-// @ts-ignore
-add(20, 'World');       // TypeError
-```
+This library uses metadata reflections to infer types from the TypeScript type signatures.  Since TypeScript only supports [basic type serialization](http://blog.wolksoftware.com/decorators-metadata-reflection-in-typescript-from-novice-to-expert-part-4#3-basic-type-serialization_1) only basic types can be inferred.  Basic types defined by default are the primitives `number`, `string`, `boolean` and the constructors `Array`, `Function`, `Date`, and `RegExp`.  Types that are class constructors are are also supported but must be defined per `Typed` instance (see types below).
 
 TypeScript serializes both `undefined` and `null` as `void 0`, so these types should be explicitly listed in the signature.  Use the predefined class `Any` for `unknown` or `any`.
 
@@ -161,6 +137,32 @@ const inspect = typed.function(Inspect);
 inspect(undefined); // 'a is undefined'
 inspect(null);      // 'a is null'
 inspect('string');  // 'a is something'
+```
+
+Other types (including `any`, `unknown`, union types, and interfaces) are treated as `Object` by TypeScript type serialization.  To support more complex types the input parameter signatures must be supplied to the `signature` decorator.  For type unions use an array.  When listing explicit signatures for primitives used the built-in constructors.
+
+```ts
+class Add {
+  @signature(String, [Number, String])
+  add(a: string, b: number | string): string {
+    return '' + a + ' ' + b;
+  }
+
+  @signature()
+  add(a: number, b: number): string {
+    return a + b;
+  }
+}
+
+// correctly typed as `((a: string, b: number | string) => string) & (a: number, a: number) => number)`
+const add = typed.function(Add);
+
+add(20, 22);            // 42
+add('Hello', 'World');  // 'Hello World'
+add('Hello', 42);       // 'Hello 42'
+
+// @ts-ignore
+add(20, 'World');       // TypeError
 ```
 
 Signatures are inherited:
@@ -224,7 +226,7 @@ Guards defined on classes are inherited.
 ```ts
 class Even extends Integer {
   @guard()
-  static isEven(x: number) {
+  static isEven(x: number): x is Even {
     // isInteger guard on `Integer` is invoked before isEven
     return x % 2 === 0;
   }
@@ -232,6 +234,30 @@ class Even extends Integer {
 
 typed.add(Even);
 ```
+
+In the examples above the runtime type guards exists on the class itself.  Guards can be added to other classes by passing the class to the decorator.
+
+```ts
+import Decimal from 'decimal.js';
+
+class Numbers {
+  @guard(Decimal)
+  static isDecimal(x: unknown): x is Decimal {
+    return x instanceof Decimal;
+  }
+
+  @guard(BigInt)
+  static isBigInt(x: unknown): x is BigInt {
+    return typeof x === 'bigint';
+  }
+}
+
+typed.add(Numbers);
+```
+
+In these cases the defininions are attached to the containing class not the type.
+
+TBR One weird trick!!
 
 ### Conversions
 
@@ -273,14 +299,14 @@ class add {
 const add = typed.function(Add);
 ```
 
-Function methods are evaluated with priority from top to bottom.
+Function methods are evaluated with priority from top to bottom.  Note in this case the `number` methid is envoked if both arguments are numbers, the complex methid is invoked only when one or both are are `Complex` instances.
 
 ```ts
 class add {
   name = 'add';
 
   @signature()
-  complex(a: number, b: number): number {
+  number(a: number, b: number): number {
     return a + b;
   }
 
