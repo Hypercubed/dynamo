@@ -6,7 +6,6 @@
 - test no default types
 - document complex type trick
 - document autoadd. skip defaults
-- for conversions store guard instead of `fromType` to avoid a strong reference!!
 - test if `choose` is better as an `indexOf`.
 - add benchmarks for:
   - overload.js

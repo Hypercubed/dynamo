@@ -70,7 +70,7 @@ class DefaultTypes {
 }
 
 interface ConversionMethod {
-  fromType: Type;
+  fromGuard: Guard<unknown>;
   convert: Conversion<unknown, unknown>;
 }
 
@@ -197,21 +197,21 @@ export class Typed {
     const len = types.length;
     // @ts-ignore
     const converters: Array<Conversion<unknown, unknown>> = types.map(() => id);
+    const guards = types.map(t => this._getGuard(t));
 
     types.forEach(toType => {
       const conversions = this.conversions.get(toType) || [];
-      conversions.forEach(({ fromType, convert }) => {
-        if (types.indexOf(fromType) < 0) {
-          types.push(fromType);
+      conversions.forEach(({ fromGuard, convert }) => {
+        if (guards.indexOf(fromGuard) < 0) {
+          guards.push(fromGuard);
           converters.push(convert);
         }
       });
     });
 
-    const guards = types.map(t => this._getGuard(t));
     const _union = union(guards);
 
-    if (types.length === len) {
+    if (guards.length === len) {
       // Optimization when no conversions were added
       return [_union, id];
     }
@@ -256,10 +256,10 @@ export class Typed {
     for (const key in map) {
       const { fromType, toType } = map[key];
       const existing = this.conversions.get(toType) || [];
+      const fromGuard = this._getGuard(fromType);
 
-      // TODO: store guard instead of fromType to avoid a strong reference!!
-      const conversion = { 
-        fromType,
+      const conversion: ConversionMethod = {
+        fromGuard,
         convert: ctor[key]
       };
       // TODO: error if adding the same conversion
