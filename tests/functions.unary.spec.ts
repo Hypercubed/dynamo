@@ -108,3 +108,29 @@ test('throws for unknown type', t => {
     const fn = typed.function(T);
   }, 'Unknown type "UnknownType"');
 });
+
+class S2 {
+  name = 'foo';
+
+  @signature(Number)
+  s2 = (value: number): string => {
+    return 'number: ' + value;
+  }
+}
+
+const s2 = typed.function(S2);
+
+test('functions as props has the correct signature', t => {
+  assert<IsExact<typeof s2, ((a: number) => string)>>(true);
+
+  t.is(s2.name, 'foo');
+  t.is(s2.length, 1);
+});
+
+test.only('functions as props calling the function works', t => {
+  const a = s2(5);
+
+  t.is(a, `number: 5`);
+
+  assert<IsExact<typeof a, string>>(true);
+});

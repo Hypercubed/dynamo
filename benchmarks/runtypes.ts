@@ -15,7 +15,7 @@ function createFromGuard<A extends Runtype>(guard: (x: unknown) => x is Static<A
 // tslint:disable-next-line:variable-name
 const StringType = createFromGuard(base, { tag: 'number' });
 
-suite('calling a typed function', (s: any) => {
+suite('runtypes', (s: any) => {
   const expected = [true, false];
   let result: boolean[];
 

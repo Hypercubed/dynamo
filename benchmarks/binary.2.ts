@@ -40,7 +40,7 @@ const input: any = [['Hello', 42], [42, 'Hello']];
 const expected = [ 'string, number', 'number, string'];
 let result: string[];
 
-suite('calling a typed function', (s: any) => {
+suite('binary function, two overides', (s: any) => {
 
   s.cycle(() => {
     assert.deepEqual(result, expected);

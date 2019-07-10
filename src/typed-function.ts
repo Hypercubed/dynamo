@@ -5,7 +5,7 @@ import {
   META_METHODS, META_GUARDS, META_CONVERSIONS,
   SignatureMap, GuardMap, ConversionMap, Parameter
 } from './decorators';
-import { union, tuple, matcher, choose, intersect, mapper, id } from './guards';
+import { union, tuple, matcher, index, intersect, mapper, id } from './guards';
 import { Any, Undefined, Null, fixType } from './types';
 
 guard()(Any, 'isAny');
@@ -116,7 +116,9 @@ export class Typed {
 
     let maxLength = 0;
     let minLength = Infinity;
-    const sequence: Array<[Guard<unknown>, any]> = [];
+    const guards: Array<Guard<unknown>> = [];
+    const converters: any[] = [];
+    const methods: any[] = [];
 
     for (const key in map) {
       const signatures = map[key];
@@ -124,11 +126,13 @@ export class Typed {
         maxLength = Math.max(maxLength, signature.length);
         minLength = Math.min(minLength, signature.length);
         const [g, convert] = this._getSignatureGuard(signature);
-        sequence.push([g, [ target[key], convert ]]);
+        guards.push(g);
+        converters.push(convert);
+        methods.push(target[key]);
       });
     }
 
-    const fn = this._makeFunction(sequence, minLength, maxLength);
+    const fn = this._makeFunction(guards, converters, methods, minLength, maxLength);
 
     if (fn.length !== maxLength) {
       Object.defineProperty(fn, 'length', { value: maxLength });
@@ -138,12 +142,17 @@ export class Typed {
     return fn as any;
   }
 
-  private _makeFunction(sequence: Array<[Guard<unknown>, any]>, minLength: number, maxLength: number): any {
+  private _makeFunction(
+    guards: Array<Guard<unknown>>,
+    converters: any[],
+    methods: any[],
+    minLength: number, maxLength: number): any {
     // Todo Optimizations:
     // When min = max, skip length checks?
     // optimized functions for sigs < 6, skip choose
+    // const len = guards.length;
 
-    const [g0, [m0, c0]] = sequence[0];
+    const m0 = methods[0];
 
     if (maxLength === 0) {
       // Special case when the function is a nullary
@@ -151,27 +160,20 @@ export class Typed {
       // not very usefull anyway
       return function() {
         if (arguments.length > 0) {
-          throw new TypeError('No alternatives were matched');
+          throw new Error('No alternatives were matched');
         }
         return m0.call(this);
       };
     }
 
-    if (sequence.length === 1) {
-      // Special case when there is only one method
-      return function(...args: unknown[]) {
-        if (g0(args)) return m0.apply(this, c0(args));
-        throw new TypeError('No alternatives were matched');
-      };
-    }
-
-    const [g1, [m1, c1]] = sequence[1];
-
-    const s = choose<[ AnyFunction, AnyFunction ]>(sequence.slice(2));
+    const s = index(guards);
     return function(...args: unknown[]) {
-      if (g0(args)) return m0.apply(this, c0(args));  // opt for len = 2
-      if (g1(args)) return m1.apply(this, c1(args));
-      const [ m, c ] = s(args);
+      const i = s(args);
+      if (i < 0) {
+        throw new Error('No alternatives were matched');
+      }
+      const m = methods[i];
+      const c = converters[i];
       return m.apply(this, c(args));
     };
   }

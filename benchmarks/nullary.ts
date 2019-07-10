@@ -17,7 +17,7 @@ const base = () => {
   return `Hello World`;
 };
 
-suite('calling a typed function', (s: any) => {
+suite('nullary', (s: any) => {
   const expected = `Hello World`;
   let result: string;
 

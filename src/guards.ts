@@ -91,37 +91,66 @@ export function tuple(guards: Array<Guard<unknown>>): Guard<unknown> {
   };
 }
 
-export function choose<Z>(cases: Array<[any, Z]>): (x: any) => Z {
-  const len = cases.length;
+export function index(guards: Array<Guard<unknown>>): (x: any) => number {
+  const len = guards.length;
 
   if (len === 0) {
     // optimization when length is zero
-    // shouldn't really be here anyway
     return () => {
-      throw new Error('No alternatives were matched');
+      return -1;
     };
   }
 
-  const [c00, c01] = cases[0];
+  const g0 = guards[0];
 
   if (len === 1) {
     // optimization when length is one
     return (x: any) => {
-      if (c00(x)) return c01;
-      throw new Error('No alternatives were matched');
+      if (g0(x)) return 0;
+      return -1;
     };
   }
 
-  const [c10, c11] = cases[1];
+  const g1 = guards[1];
+
+  if (len === 2) {
+    return (x: any) => {
+      if (g0(x)) return 0;  // optimizations for len == 2
+      if (g1(x)) return 1;
+    };
+  }
+
+  const g2 = guards[2];
+
+  if (len === 3) {
+    return (x: any) => {
+      if (g0(x)) return 0;  // optimizations for len == 3
+      if (g1(x)) return 1;
+      if (g2(x)) return 2;
+    };
+  }
+
+  const g3 = guards[3];
+
+  if (len === 4) {
+    return (x: any) => {
+      if (g0(x)) return 0;  // optimizations for len == 3
+      if (g1(x)) return 1;
+      if (g2(x)) return 2;
+      if (g3(x)) return 3;
+    };
+  }
 
   return (x: any) => {
-    if (c00(x)) return c01;  // optimizations for len == 2
-    if (c10(x)) return c11;
-    let i = 1;
+    if (g0(x)) return 0;
+    if (g1(x)) return 1;
+    if (g2(x)) return 2;
+    if (g3(x)) return 3;
+    let i = 3;
     while (++i < len) {
-      if (cases[i][0](x)) return cases[i][1];
+      if (guards[i](x)) return i;
     }
-    throw new Error('No alternatives were matched');
+    return -1;
   };
 }
 

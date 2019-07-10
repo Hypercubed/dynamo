@@ -36,7 +36,7 @@ const base = (a: number | string) => {
   throw new TypeError('TypeError');
 };
 
-suite('calling a typed function', (s: any) => {
+suite('unary function, one overides', (s: any) => {
   const input: [string, number] = ['Hello', 42];
   const expected = ['the string Hello', 'the number 42'];
   let result: string[];

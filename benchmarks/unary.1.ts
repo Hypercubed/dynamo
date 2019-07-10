@@ -27,7 +27,7 @@ const base = (a: number) => {
   throw new TypeError('TypeError');
 };
 
-suite('calling a typed function', (s: any) => {
+suite('unary function, one overides', (s: any) => {
   const input = 42;
   const expected = 'the number 42';
   let result: string;

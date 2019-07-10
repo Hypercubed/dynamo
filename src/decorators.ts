@@ -21,28 +21,26 @@ export function signature(...paramTypes: Array<Type | Parameter>) {
   }
 
   return (target: any, key: string) => {
-    if (typeof target[key] === 'function') {
-      if (paramTypes.length < 1) {
-        paramTypes = Reflect.getMetadata('design:paramtypes', target, key) || [];
-      }
-
-      // Converts types to a Signature
-      const _signature = paramTypes.map(t => Array.isArray(t) ? t : [t]);
-
-      // Convert each parameter type into an array to types
-      let map: SignatureMap = Reflect.getMetadata(META_METHODS, target) || {};
-      const existing = map[key] || [];
-
-      // note: new new signatures are added ahead of existingSignatures
-      // decorators are process top to bottom in a class
-      // but bottom to top per method
-      map = {
-        ...map,
-        [key]: [ _signature, ...existing ]  // note: new siginatures are 
-      };
-
-      Reflect.defineMetadata(META_METHODS, map, target);
+    if (paramTypes.length < 1) {
+      paramTypes = Reflect.getMetadata('design:paramtypes', target, key) || [];
     }
+
+    // Converts types to a Signature
+    const _signature = paramTypes.map(t => Array.isArray(t) ? t : [t]);
+
+    // Convert each parameter type into an array to types
+    let map: SignatureMap = Reflect.getMetadata(META_METHODS, target) || {};
+    const existing = map[key] || [];
+
+    // note: new new signatures are added ahead of existingSignatures
+    // decorators are process top to bottom in a class
+    // but bottom to top per method
+    map = {
+      ...map,
+      [key]: [ _signature, ...existing ]  // note: new siginatures are 
+    };
+
+    Reflect.defineMetadata(META_METHODS, map, target);
   };
 }
 
