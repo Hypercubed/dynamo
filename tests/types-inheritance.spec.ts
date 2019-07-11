@@ -147,7 +147,7 @@ test('parity', t => {
   t.throws(() => {
     // @ts-ignore
     parity('10');    
-  }, 'No alternatives were matched');
+  }, 'Unexpected type of arguments. Expected [Even] or [Odd].');
 });
 
 test('name', t => {

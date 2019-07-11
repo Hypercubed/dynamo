@@ -35,21 +35,21 @@ test('should throw when given too many arguments', t => {
   t.throws(() => {
     // @ts-ignore
     s(1, 2);
-  }, 'No alternatives were matched');
+  }, 'Unexpected type of argument');
 });
 
 test('should throw when given too few arguments', t => {
   t.throws(() => {
     // @ts-ignore
     s();
-  }, 'No alternatives were matched');
+  }, 'Unexpected type of argument');
 });
 
 test('should throw when given invalid arguments', t => {
   t.throws(() => {
     // @ts-ignore
     s('hello');
-  }, 'No alternatives were matched');
+  }, 'Unexpected type of argument');
 });
 
 class F {

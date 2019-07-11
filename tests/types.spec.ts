@@ -39,14 +39,10 @@ test('implicit type', t => {
   t.is(fn('hello'), 'a is "hello"');
   t.is(fn(new Fish('wanda')), 'a is a fish named wanda');
 
-  try {
-    (fn as any)(42, 'false');
-  } catch (err) {
-    t.is(
-      err.toString(),
-      'Error: No alternatives were matched'
-    );
-  }
+  t.throws(() => {
+    // @ts-ignore
+    fn(42, 'false');
+  }, 'Unexpected type of arguments. Expected [Number,Boolean] or [String] or [Fish].');
 
   t.is(fn.name, 'Fn');
   t.is(fn.length, 2);
@@ -77,14 +73,10 @@ test('explicit type', t => {
   t.is(fn('hello'), 'a is "hello"');
   t.is(fn(new Fish('wanda')), 'a is a fish named wanda');
 
-  try {
-    (fn as any)(42, 'false');
-  } catch (err) {
-    t.is(
-      err.toString(),
-      'Error: No alternatives were matched'
-    );
-  }
+  t.throws(() => {
+    // @ts-ignore
+    fn(42, 'false');
+  }, 'Unexpected type of arguments. Expected [Number,Boolean] or [String] or [Fish].');
 
   t.is(fn.name, 'Fn');
   t.is(fn.length, 2);

@@ -83,8 +83,10 @@ test('conversion', t => {
 test('errors', t => {
   t.throws(() => {
     t.is(times(3, '6' as any), 18);   // Typescript doesn't allow boolean times string
-  }, 'No alternatives were matched');
+  // tslint:disable-next-line:max-line-length
+  }, 'Unexpected type of arguments. Expected [Boolean,Boolean] or [Number,Number] or [BigInt|Number,BigInt|Number] or [Complex|Number|BigInt,Complex|Number|BigInt].');
   t.throws(() => {
     t.is(times(true as any, 6), 18);  // Typescript doesn't allow boolean times number
-  }, 'No alternatives were matched');
+  // tslint:disable-next-line:max-line-length
+  }, 'Unexpected type of arguments. Expected [Boolean,Boolean] or [Number,Number] or [BigInt|Number,BigInt|Number] or [Complex|Number|BigInt,Complex|Number|BigInt].');
 });

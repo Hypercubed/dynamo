@@ -21,6 +21,6 @@ test('union types', t => {
   t.is(fn(2), 'number');
   t.throws(
     () => { fn('string' as any); },
-    'No alternatives were matched'
+    'Unexpected type of arguments. Expected [Number|Boolean].'
   );
 });

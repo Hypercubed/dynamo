@@ -88,12 +88,12 @@ test('getName', t => {
   t.throws(() => {
     // @ts-ignore
     getName(45);
-  }, 'No alternatives were matched');
+  }, 'Unexpected type of arguments. Expected [Person].');
 
   t.throws(() => {
     // @ts-ignore
     getName({ name: 'Mike', age: 45 });
-  }, 'No alternatives were matched');
+  }, 'Unexpected type of arguments. Expected [Person].');
 
   const mike = createPerson('Mike', 45);
   t.is(getName(mike), 'Mike');

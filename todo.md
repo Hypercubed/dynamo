@@ -5,13 +5,7 @@
 - test `this` binding
 - test no default types
 - document complex type trick
-- document autoadd. skip defaults
-- add benchmarks for:
-  - overload.js
-  - overlord-js
-  - overloading
-  - node-overloading
-
+- document autoadd. skip defaults.
 
 # Look into
 - `guard` and `conversions` on function definition class (isolated?)
@@ -19,10 +13,9 @@
 - Use type guards directly as a Type?
 - add both plain object and any object
 - Any vs Unknown? Any known type, any unknown type, or any type?
-- Test with other runtime type chekc libs:
+- Test with other runtime type check libs:
   - Automattic/mongoose
   - check-complex-types
-
 
 # Non-goals (at this time)
 - Optional arguments

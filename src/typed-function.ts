@@ -70,6 +70,7 @@ class DefaultTypes {
 }
 
 interface ConversionMethod {
+  fromName: string;
   fromGuard: Guard<unknown>;
   convert: Conversion<unknown, unknown>;
 }
@@ -119,20 +120,22 @@ export class Typed {
     const guards: Array<Guard<unknown>> = [];
     const converters: any[] = [];
     const methods: any[] = [];
+    const descriptions: string[] = [];
 
     for (const key in map) {
       const signatures = map[key];
       signatures.forEach(signature => {
         maxLength = Math.max(maxLength, signature.length);
         minLength = Math.min(minLength, signature.length);
-        const [g, convert] = this._getSignatureGuard(signature);
+        const [g, convert, description] = this._getSignatureGuard(signature);
         guards.push(g);
         converters.push(convert);
         methods.push(target[key]);
+        descriptions.push(description);
       });
     }
 
-    const fn = this._makeFunction(guards, converters, methods, minLength, maxLength);
+    const fn = this._makeFunction(guards, converters, methods, descriptions, minLength, maxLength);
 
     if (fn.length !== maxLength) {
       Object.defineProperty(fn, 'length', { value: maxLength });
@@ -146,11 +149,15 @@ export class Typed {
     guards: Array<Guard<unknown>>,
     converters: any[],
     methods: any[],
-    minLength: number, maxLength: number): any {
+    descriptions: string[],
+    minLength: number,
+    maxLength: number): any {
     // Todo Optimizations:
     // When min = max, skip length checks?
     // optimized functions for sigs < 6, skip choose
     // const len = guards.length;
+
+    const description = descriptions.join(' or ');
 
     const m0 = methods[0];
 
@@ -160,7 +167,8 @@ export class Typed {
       // not very usefull anyway
       return function() {
         if (arguments.length > 0) {
-          throw new Error('No alternatives were matched');
+          // throw new Error(descriptions[0]);
+          throw new Error(`Expected 0 arguments, but got ${arguments.length}`);
         }
         return m0.call(this);
       };
@@ -170,7 +178,7 @@ export class Typed {
     return function(...args: unknown[]) {
       const i = s(args);
       if (i < 0) {
-        throw new Error('No alternatives were matched');
+        throw new TypeError(`Unexpected type of arguments. Expected ${description}.`);
       }
       const m = methods[i];
       const c = converters[i];
@@ -181,13 +189,14 @@ export class Typed {
   /**
    * Given an array type Parameters, returns the guard and matcher function
    */
-  private _getSignatureGuard(params: Parameter[]): [Guard<unknown>, Conversion<unknown[], unknown[]>] {
+  private _getSignatureGuard(params: Parameter[]): [Guard<unknown>, Conversion<unknown[], unknown[]>, string] {
     const guardsAndMatchers = params.map(t => this._convertParamToUnion(t));
     const guards = guardsAndMatchers.map(x => x[0]);
     const matchers = guardsAndMatchers.map(x => x[1]);
+    const description = guardsAndMatchers.map(x => x[2]).join(',');
     const _tuple = tuple(guards);
     const _convert = mapper(matchers);
-    return [_tuple, _convert];
+    return [_tuple, _convert, `[${description}]`];
   }
 
   /**
@@ -195,34 +204,35 @@ export class Typed {
    * Arrays are converted to intersections
    * 
    */
-  private _convertParamToUnion(types: Type[]): [Guard<unknown>, Conversion<unknown, unknown>] {
+  private _convertParamToUnion(types: Type[]): [Guard<unknown>, Conversion<unknown, unknown>, string] {
     const len = types.length;
     // @ts-ignore
     const converters: Array<Conversion<unknown, unknown>> = types.map(() => id);
     const guards = types.map(t => this._getGuard(t));
 
-    const l = types.length;
-
+    const descriptions = types.map(getName);
+    
     types.forEach(toType => {
       const conversions = this.conversions.get(toType) || [];
-      conversions.forEach(({ fromGuard, convert }) => {
+      conversions.forEach(({ fromName, fromGuard, convert }) => {
         if (guards.indexOf(fromGuard) < 0) {
           guards.push(fromGuard);
           converters.push(convert);
-          types.push(fromGuard);
+          descriptions.push(fromName);
         }
       });
     });
 
     const _union = union(guards);
+    const description = descriptions.join('|');
 
     if (guards.length === len) {
       // Optimization when no conversions were added
-      return [_union, id];
+      return [_union, id, description];
     }
 
     const _match = matcher(guards, converters);
-    return [_union, _match];
+    return [_union, _match, description];
   }
 
   private _getGuard(type: Type): Guard<unknown> {
@@ -262,8 +272,10 @@ export class Typed {
       const { fromType, toType } = map[key];
       const existing = this.conversions.get(toType) || [];
       const fromGuard = this._getGuard(fromType);
+      const fromName = getName(fromType);
 
       const conversion: ConversionMethod = {
+        fromName,
         fromGuard,
         convert: ctor[key]
       };
@@ -279,5 +291,9 @@ function getName(token: Type | Type[]): string {
   if (token === null || typeof token === 'undefined') {
     return String(token);
   }
-  return ('name' in token && typeof token.name === 'string') ? token.name : 'unknown';
+  try {
+    return ('name' in token && typeof token.name === 'string') ? token.name : 'unknown';
+  } catch (err) {
+    return 'unknown';
+  }
 }

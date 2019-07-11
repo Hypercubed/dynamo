@@ -12,11 +12,11 @@ function convertGuard<T extends unknown>(_guard: Guard<T>, name?: string): Const
 }
 
 // tslint:disable-next-line:variable-name
-const Name = convertGuard<string>((x: unknown) => typeof x === 'string' && x.length > 0);
+const Name = convertGuard<string>((x: unknown) => typeof x === 'string' && x.length > 0, 'Name');
 type Name = InstanceType<typeof Name>;
 
 // tslint:disable-next-line:variable-name
-const Age = convertGuard<number>((n: unknown) => typeof n === 'number' && Number.isInteger(n) && n >= 0);
+const Age = convertGuard<number>((n: unknown) => typeof n === 'number' && Number.isInteger(n) && n >= 0, 'Age');
 type Age = InstanceType<typeof Age>;
 
 interface Person {
@@ -48,15 +48,15 @@ test('example', t => {
   t.throws(() => {
     // @ts-ignore
     createPerson(45, 45);
-  }, 'No alternatives were matched');
+  }, 'Unexpected type of arguments. Expected [Name,Age].');
 
   t.throws(() => {
     createPerson('', 45);
-  }, 'No alternatives were matched');
+  }, 'Unexpected type of arguments. Expected [Name,Age].');
 
   t.throws(() => {
     createPerson('Mike', -1.2);
-  }, 'No alternatives were matched');
+  }, 'Unexpected type of arguments. Expected [Name,Age].');
 
   const mike = createPerson('Mike', 45);
 
@@ -79,12 +79,12 @@ test('getName', t => {
   t.throws(() => {
     // @ts-ignore
     getName(45);
-  }, 'No alternatives were matched');
+  }, 'Unexpected type of arguments. Expected [Object].');
 
   /* t.throws(() => {
     // @ts-ignore
     getName({ name: 'Mike', age: 45 });
-  }, 'No alternatives were matched'); */
+  }, 'Unexpected type of argument'); */
 
   const mike = createPerson('Mike', 45);
   t.is(getName(mike), 'Mike');
