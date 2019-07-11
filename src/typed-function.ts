@@ -201,12 +201,15 @@ export class Typed {
     const converters: Array<Conversion<unknown, unknown>> = types.map(() => id);
     const guards = types.map(t => this._getGuard(t));
 
+    const l = types.length;
+
     types.forEach(toType => {
       const conversions = this.conversions.get(toType) || [];
       conversions.forEach(({ fromGuard, convert }) => {
         if (guards.indexOf(fromGuard) < 0) {
           guards.push(fromGuard);
           converters.push(convert);
+          types.push(fromGuard);
         }
       });
     });
