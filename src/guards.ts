@@ -101,55 +101,33 @@ export function index(guards: Array<Guard<unknown>>): (x: any) => number {
     };
   }
 
-  const g0 = guards[0];
-
-  if (len === 1) {
-    // optimization when length is one
-    return (x: any) => {
-      if (g0(x)) return 0;
-      return -1;
-    };
-  }
-
-  const g1 = guards[1];
-
-  if (len === 2) {
-    return (x: any) => {
-      if (g0(x)) return 0;  // optimizations for len == 2
-      if (g1(x)) return 1;
-    };
-  }
-
-  const g2 = guards[2];
-
-  if (len === 3) {
-    return (x: any) => {
-      if (g0(x)) return 0;  // optimizations for len == 3
-      if (g1(x)) return 1;
-      if (g2(x)) return 2;
-    };
-  }
-
-  const g3 = guards[3];
-
-  if (len === 4) {
-    return (x: any) => {
-      if (g0(x)) return 0;  // optimizations for len == 3
-      if (g1(x)) return 1;
-      if (g2(x)) return 2;
-      if (g3(x)) return 3;
-    };
-  }
-
-  return (x: any) => {
-    if (g0(x)) return 0;
-    if (g1(x)) return 1;
-    if (g2(x)) return 2;
-    if (g3(x)) return 3;
-    let i = 3;
-    while (++i < len) {
-      if (guards[i](x)) return i;
+  return (x: any[]) => {
+    // Duff’s Device
+    const startAt = len % 8;
+    let i = -1;
+    switch(startAt) {
+      case 0: if (guards[++i](x)) return i;
+      case 7: if (guards[++i](x)) return i;
+      case 6: if (guards[++i](x)) return i;
+      case 5: if (guards[++i](x)) return i;
+      case 4: if (guards[++i](x)) return i;
+      case 3: if (guards[++i](x)) return i;
+      case 2: if (guards[++i](x)) return i;
+      case 1: if (guards[++i](x)) return i;
     }
+
+    let iterations = Math.floor(len / 8);
+    while (iterations--) {
+      if (guards[++i](x)) return i;
+      if (guards[++i](x)) return i;
+      if (guards[++i](x)) return i;
+      if (guards[++i](x)) return i;
+      if (guards[++i](x)) return i;
+      if (guards[++i](x)) return i;
+      if (guards[++i](x)) return i;
+      if (guards[++i](x)) return i;
+    }
+
     return -1;
   };
 }

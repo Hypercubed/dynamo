@@ -8,8 +8,6 @@
 - document autoadd. skip defaults
 - add benchmarks for:
   - overload.js
-  - function-overloader
-  - node-polymorphic
   - overlord-js
   - overloading
   - node-overloading
