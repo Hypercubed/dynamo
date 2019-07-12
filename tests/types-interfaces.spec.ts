@@ -4,7 +4,7 @@ import { assert, IsExact } from 'conditional-type-checks';
 
 const typed = new Typed();
 
-function convertGuard<T extends unknown>(_guard: Guard<T>, name?: string): Constructor<T> {
+function convertGuard<T extends unknown>(_guard: GuardFunction<T>, name?: string): Constructor<T> {
   _guard['guard'] = _guard;
   guard()(_guard, 'guard');
   Object.defineProperty(_guard, 'name', { value: name });

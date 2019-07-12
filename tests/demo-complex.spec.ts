@@ -106,6 +106,7 @@ test('errors', t => {
 
   t.throws(() => {
     // typed-funtion throws at runtime
-    times(3, '6' as any);
+    // @ts-ignore
+    times(3, '6');
   }, 'Unexpected type of arguments. Expected [Number,Number] or [Complex|Number,Complex|Number].');
 });
