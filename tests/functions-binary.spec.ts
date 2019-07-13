@@ -71,3 +71,22 @@ test('mul has the correct signature', t => {
   t.is(mul.name, 'Mul');
   t.is(mul.length, 2);
 });
+
+test('should pass context', t => {
+  class F {
+    @signature()
+    numbers(a: number, b: number) {
+      return `the context to numbers is "${this}"`;
+    }
+  
+    @signature()
+    strings(a: string, b: string) {
+      return `the context to strings is "${this}"`;
+    }
+  }
+
+  const f = typed.function(F);
+
+  t.is(f.call('this string', 'a', 'b'), `the context to strings is "this string"`);
+  t.is(f.call('a different string', 1, 2), `the context to numbers is "a different string"`);
+});

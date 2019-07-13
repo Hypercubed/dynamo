@@ -1,22 +1,17 @@
 # ts-typed-function
 
-#  Todos
-- better errors
-- test `this` binding
-- test no default types
-- document complex type trick
-- document autoadd. skip defaults.
-
-# Look into
-- `guard` and `conversions` on function definition class (isolated?)
+## Look into
+- `guard` and `conversions` on function definition class (isolated to a single?)
 - Child environments inherit types and conversions from parent?
-- Use type guards directly as a Type?
-- add both plain object and any object
-- Any vs Unknown? Any known type, any unknown type, or any type?
+- Use `Is` functions directly as a Type?
+- add both plain object (`Object`) and any object (`Record`)
+- `Any` vs `Unknown`? Any known type, any unknown type, or any type?
 - Test with other runtime type check libs:
   - Automattic/mongoose
   - check-complex-types
+  - gcanti/io-ts
+- more tests without default types
 
-# Non-goals (at this time)
+## Non-goals (at this time)
 - Optional arguments
 - Rest arguments

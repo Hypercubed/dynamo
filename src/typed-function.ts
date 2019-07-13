@@ -2,13 +2,13 @@
 import 'reflect-metadata';
 import {
   META_METHODS, META_GUARDS, META_CONVERSIONS,
-  SignatureMap, GuardMap, ConversionMap, Parameter
+  SignatureMap, GuardMap, ConversionMap
 } from './decorators';
-import { Conversion, union, tuple, matcher, index, intersect, mapper, id } from './guards';
+import { Converter, union, tuple, matcher, intersect, mapper, identity } from './guards';
 import { fixType } from './types';
 import { DefaultTypes } from './default-types';
 
-interface Case extends Conversion {
+interface Case extends Converter {
   method: AnyFunction;
 }
 
@@ -20,8 +20,8 @@ interface TypedOptions {
 interface TypeData {
   id: string;
   name: string;
-  tests: GuardFunction[];
-  conversions: Conversion[];
+  tests: Is[];
+  conversions: Converter[];
 }
 
 const defaultOptions: TypedOptions = {
@@ -42,7 +42,9 @@ export class Typed {
       ...defaultOptions,
       ...options
     };
-    this.add(this.options.types);
+    if (this.options.types) {
+      this.add(this.options.types);
+    }
   }
 
   add(...ctors: Type[]) {
@@ -104,7 +106,6 @@ export class Typed {
       const m0 = methods[0];
       return function() {
         if (arguments.length > 0) {
-          // throw new Error(descriptions[0]);
           throw new Error(`Expected 0 arguments, but got ${arguments.length}`);
         }
         return m0.call(this);
@@ -115,15 +116,26 @@ export class Typed {
     const tests = cases.map(g => g.test);
     const converters = cases.map(g => g.convert);
 
-    const s = index(tests);
+    const n = tests.length - 1;
+    const startAt = tests.length % 4;
     return function(...args: unknown[]) {
-      const i = s(args);
-      if (i < 0) {
-        throw new TypeError(`Unexpected type of arguments. Expected ${description}.`);
+      let i = -1;
+
+      switch(startAt) {
+        case 0: if (tests[++i](args)) return methods[i].apply(this, converters[i](args));
+        case 3: if (tests[++i](args)) return methods[i].apply(this, converters[i](args));
+        case 2: if (tests[++i](args)) return methods[i].apply(this, converters[i](args));
+        case 1: if (tests[++i](args)) return methods[i].apply(this, converters[i](args));
       }
-      const m = methods[i];
-      const c = converters[i];
-      return m.apply(this, c(args));
+
+      while (i < n) {
+        if (tests[++i](args)) return methods[i].apply(this, converters[i](args));
+        if (tests[++i](args)) return methods[i].apply(this, converters[i](args));
+        if (tests[++i](args)) return methods[i].apply(this, converters[i](args));
+        if (tests[++i](args)) return methods[i].apply(this, converters[i](args));
+      }
+  
+      throw new TypeError(`Unexpected type of arguments. Expected ${description}.`);
     };
   }
 
@@ -132,13 +144,13 @@ export class Typed {
    * Arrays are converted to intersections
    * 
    */
-  private convertParamToUnion(types: Type[]): Conversion {
-    const cons: Conversion[] = types.map(type => {
+  private convertParamToUnion(types: Type[]): Converter {
+    const cons: Converter[] = types.map(type => {
       const data = this.getTypeData(type);
       return {
         ...data,
         test: intersect(data.tests),
-        convert: id
+        convert: identity
       };
     });
 
@@ -159,7 +171,7 @@ export class Typed {
     return {
       id: '',
       ...union(cons),
-      convert: cons.length === types.length ? id : matcher(cons)
+      convert: cons.length === types.length ? identity : matcher(cons)
     };
   }
 
@@ -208,7 +220,7 @@ export class Typed {
       const fromTypeData = this.getTypeData(fromType);
       const toTypeData = this.getTypeData(toType);
 
-      const conversion: Conversion = {
+      const conversion: Converter = {
         ...fromTypeData,
         test: intersect(fromTypeData.tests),
         convert: ctor[key]

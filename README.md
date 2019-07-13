@@ -1,15 +1,17 @@
 # ts-typed-function
 
-Runtime function overloading in TypeScript using decorators.  Easy to read and understand class definitions are converted to overloaded functions.  Avoids nasty runtime typechecking.
+Runtime function overloading in TypeScript using decorators.  Easy to read and understand class definitions are converted to overloaded functions.  Avoids nasty runtime type checking.
 
 ## Introduction
 
 * Compose multiple method signatures into a correctly typed function.
-* Runtime type-checking of function arguments based on TypeScript type signatures.
+* Runtime type-checking of function arguments based on TypeScript type signatures (when possible).
 * Defined types coercions.
 * Supports union types, `any` type, and variable arguments.
+* Excellent mechanism for type constraints.
+* Extensively benchmarked and micro-optimized.
 
-> Requires `experimentalDecorators` and `emitDecoratorMetadata` be enabled in your tsconfig.
+> Requires `experimentalDecorators` and `emitDecoratorMetadata` be enabled in your `tsconfig.json`.
 
 ## TLDR Usage
 
@@ -19,7 +21,6 @@ import { Typed, guard, conversion, signature, Any } from 'ts-typed-function';
 const typed = new Typed();
 
 class Complex {
-
   @guard()
   static isComplex(a: any): a is Complex {
     return a instanceof Complex;
@@ -80,7 +81,10 @@ import { Typed, guard, conversion, signature, Any } from 'ts-typed-function';
 const typed = new Typed();
 ```
 
-Options TBR
+The `Typed` constructor also accepts an options object with the following options:
+
+- `types` - Instead of adding default types, uses this object.  Passing `false` allows you to have no default types.
+- `autoadd` - If `autoadd` is true, when unknown types are encountered (either as a conversion or in a function signature) ts-typed-function will them automatically.  If the typed does not have a `@guard` defined an `instanceof X` guard will be added.
 
 ### Signatures
 
@@ -208,6 +212,8 @@ class Complex {
 typed.add(Complex);
 ```
 
+#### Constraints
+
 You can add runtime constraints to primitives by extending the primitive constructor.
 
 ```ts
@@ -255,9 +261,93 @@ class Numbers {
 typed.add(Numbers);
 ```
 
-In these cases the defininions are attached to the containing class not the type.
+In these cases the definitions are attached not attached to the type class, in other words, they are not inherited.
 
-TBR One weird trick!!
+#### Complex Types and interfaces
+
+As mention above, TypeScript does not serialize complex types, for example example this will not work as expected since TypeScript will output the type metadata for the parameter `a`  as `Object`.
+
+```ts
+class Fn {
+  @signature()
+  nope(a: string | string[]): string {
+    return 'Nope';
+  }
+}
+```
+
+A solution for this is to define a class that can act as the type definition for `string | string[]` similar to adding constraints as discussed above.
+
+```ts
+class StringOrStringArray {
+  @guard()
+  static isStringArray(a: unknown): boolean {
+    return Array.isArray(a) ? x.every(x => typeof x === 'string') : typeof x === 'string';
+  }
+}
+
+typed.add(StringOrStringArray);
+
+class Fn {
+  @signature(StringOrStringArrayGuard)
+  ok(a: string | string[]): string {
+    return 'ok';
+  }
+}
+```
+
+Using the following trick we can define a type that will serialize correctly by TypeScript:
+
+```ts
+class StringOrStringArrayGuard {
+  @guard()
+  static isStringArray(a: unknown): a is (string | string[]) {
+    return Array.isArray(a) ? a.every(x => typeof x === 'string') : typeof a === 'string';
+  }
+}
+
+// tslint:disable-next-line:variable-name
+const StringOrStringArray =  StringOrStringArrayGuard;
+type StringOrStringArray = string | string[];
+
+typed.add(StringOrStringArray);
+
+class Fn {
+  @signature()
+  ok(a: StringOrStringArray): string {
+    return 'ok';
+  }
+}
+```
+
+This will work for interfaces as well.
+
+```ts
+interface IPerson {
+  name: Name;
+  age: Age;
+}
+
+class PersonGuard {
+  @guard()
+  static isPerson(x: unknown): x is IPerson {
+    return typeof x === 'object' && 'name' in x && 'age' in x;
+  }
+}
+
+// tslint:disable-next-line:variable-name
+const Person = PersonGuard;
+type Person = IPerson;
+
+typed.add(Person);
+
+class GetName {
+  @signature()
+  getName(person: Person): Name {
+    return person.name;
+  }
+}
+```
 
 ### Conversions
 
@@ -299,7 +389,7 @@ class add {
 const add = typed.function(Add);
 ```
 
-Function methods are evaluated with priority from top to bottom.  Note in this case the `number` methid is envoked if both arguments are numbers, the complex methid is invoked only when one or both are are `Complex` instances.
+Function methods are evaluated with priority from top to bottom.  Note in this case the `number` method is evoked if both arguments are numbers, the complex method is invoked only when one or both are are `Complex` instances.
 
 ```ts
 class add {

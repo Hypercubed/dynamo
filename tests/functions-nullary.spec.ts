@@ -44,3 +44,16 @@ test('should throw when given too many arguments, 3', t => {
     s(1, 2, 3);
   }, 'Expected 0 arguments, but got 3');
 });
+
+test('should pass context', t => {
+  class F {
+    @signature()
+    n(): string {
+      return `context is "${this}"`;
+    }
+  }
+
+  const f = typed.function(F);
+
+  t.is(f.call('this string'), `context is "this string"`);
+});

@@ -1,5 +1,4 @@
 import test from 'ava';
-import { assert, IsExact, Has } from 'conditional-type-checks';
 
 import { Typed, signature } from '../src';
 
@@ -46,4 +45,23 @@ test.skip('should throw when signatures collide', t => {
     t.is(f(), 'Null');
 
   }, 'Unknown type "Foo$0"');
+});
+
+test('can be created with no default types', t => {
+  const typed2 = new Typed({ types: undefined });
+
+  t.throws(() => {
+    class Foo {
+      name: 'foo';
+    }
+
+    class SN {
+      @signature(Number)
+      s(value: number) {
+        return 'number:' + value;
+      }
+    }
+
+    const fn = typed2.function(SN);
+  }, 'Unknown type "Number"');
 });

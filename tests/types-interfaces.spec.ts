@@ -4,7 +4,7 @@ import { assert, IsExact } from 'conditional-type-checks';
 
 const typed = new Typed();
 
-function convertGuard<T extends unknown>(_guard: GuardFunction<T>, name?: string): Constructor<T> {
+function convertGuard<T extends unknown>(_guard: Is<T>, name?: string): Constructor<T> {
   _guard['guard'] = _guard;
   guard()(_guard, 'guard');
   Object.defineProperty(_guard, 'name', { value: name });
@@ -19,13 +19,24 @@ type Name = InstanceType<typeof Name>;
 const Age = convertGuard<number>((n: unknown) => typeof n === 'number' && Number.isInteger(n) && n >= 0, 'Age');
 type Age = InstanceType<typeof Age>;
 
-interface Person {
+interface IPerson {
   name: Name;
   age: Age;
   kind: '$person';
 }
 
-typed.add(Name, Age);
+class PersonGuard {
+  @guard()
+  static isPerson(x: unknown): x is IPerson {
+    return typeof x === 'object' && 'name' in x && 'age' in x;
+  }
+}
+
+// tslint:disable-next-line:variable-name
+const Person = PersonGuard;
+type Person = IPerson;
+
+typed.add(Person, Name, Age);
 
 class CreatePerson {
   @signature()
@@ -79,12 +90,12 @@ test('getName', t => {
   t.throws(() => {
     // @ts-ignore
     getName(45);
-  }, 'Unexpected type of arguments. Expected [Object].');
+  }, 'Unexpected type of arguments. Expected [PersonGuard].');
 
-  /* t.throws(() => {
+  t.throws(() => {
     // @ts-ignore
-    getName({ name: 'Mike', age: 45 });
-  }, 'Unexpected type of argument'); */
+    getName({ nombre: 'Mike', años: 45 });
+  }, 'Unexpected type of arguments. Expected [PersonGuard].');
 
   const mike = createPerson('Mike', 45);
   t.is(getName(mike), 'Mike');
