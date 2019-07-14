@@ -1,13 +1,13 @@
 # ts-typed-function
 
-Runtime function overloading in TypeScript using decorators.  Easy to read and understand class definitions are converted to overloaded functions.  Avoids nasty runtime type checking.
+Fast dynamic method dispatch in TypeScript.  Easy to read and understand decorators-based function definitions are converted to dynamic dispatch methods.  Avoids nasty runtime type checking and produces corectly typed methods.
 
 ## Introduction
 
-* Compose multiple method signatures into a correctly typed function.
+* Compose multiple method signatures into a correctly typed dynamic dispatch function.
 * Runtime type-checking of function arguments based on TypeScript type signatures (when possible).
-* Defined types coercions.
-* Supports union types, `any` type, and variable arguments.
+* Custom defined types coercions.
+* Easily supports union types, `any` type, and variable arguments.
 * Excellent mechanism for type constraints.
 * Extensively benchmarked and micro-optimized.
 
