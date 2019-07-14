@@ -1,12 +1,12 @@
 import test from 'ava';
 import { IsExact, assert } from 'conditional-type-checks';
 
-import { signature, Typed, guard, conversion } from '../src';
+import { signature, Dynamo, guard, conversion } from '../src';
 
-// Create a new, isolated instance of ts-typed-function.
-const typed = new Typed();
+// Create a new, isolated instance of Dynamo.
+const dynamo = new Dynamo();
 
-// This is a typical  TS class definition
+// This is a typical TypeScript class definition
 class Complex {
 
   // A guard is used to detrmine idenity of this class at runtime
@@ -18,7 +18,7 @@ class Complex {
   }
 
   // A conversion defines a method for converting one type into another
-  // ts-typed-function uses the TS types to determine the conversion
+  // Dynamo uses the TypeScript types to determine the conversion
   // in this case from a number to a Complex
   @conversion()
   static fromNumber(a: number): Complex {
@@ -32,24 +32,24 @@ class Complex {
   }
 }
 
-// Once added to the ts-typed-function instance the type and conversions are defined
-typed.add(Complex);
+// Once added to the Dynamo instance the type and conversions are defined
+dynamo.add(Complex);
 
-// This class is a ts-typed-function type definition
+// This class is a Dynamo function definition
 class Times {
   // the resulting function will have this name
   name: 'times';
 
-  // A `@signature` defines a path within the typed-function
-  // The types are determined by the TS type definitions
+  // A `@signature` defines an implementation within the dynamo function
+  // The types are determined by the TypeScript type definitions
   // This method is only invoked if both inputs are `number`.
   @signature()
   number(a: number, b: number): number {
     return a * b;
   }
 
-  // this is a TS override so for the `complex` defined below
-  // This is necessary to get a properly typed typed-function
+  // this is a TypeScript override for the `complex` method defined below
+  // This is necessary to get a properly typed function
   complex(a: number | Complex, b: number | Complex): Complex;
 
   // This methdod is envoked if either of the inputs are Complex
@@ -60,12 +60,12 @@ class Times {
   }
 }
 
-// Generates the typoed function
-// The TS defintion of this function is the intersection of all methdos on the `Times` class
+// Generates the dynamo function
+// The TypeScript defintion of this function is the intersection of all methods on the `Times` class
 // in this case `((a: number, b: number) => number) & (a: number | Complex, b: number | Complex) => Complex)`
-// the typed-function runtime is determined by the `@signature()`s
+// the runtime implementation is determined by the `@signature()`s
 // in this case `number, number` and `Complex, Complex`.
-const times = typed.function(Times);
+const times = dynamo.function(Times);
 
 test('times has the correct signiture', t => {
   type T1 = (a: number, b: number) => number;
@@ -77,7 +77,7 @@ test('times has the correct signiture', t => {
   t.is(times.length, 2);
 });
 
-test('using the typed-function', t => {
+test('using the dynamo function', t => {
   const a = times(3, 6); // returns 18
   const b = times(new Complex(3, 0), new Complex(0, 6));  // returns the complex number (18i)
 

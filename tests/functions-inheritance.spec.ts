@@ -1,9 +1,9 @@
 import test from 'ava';
 import { assert, Has } from 'conditional-type-checks';
 
-import { Typed, signature, Any } from '../src';
+import { Dynamo, signature, Any } from '../src';
 
-const typed = new Typed();
+const dynamo = new Dynamo();
 
 class A {
   @signature()
@@ -19,8 +19,8 @@ class B extends A {
   }
 }
 
-const a = typed.function(A);
-const b = typed.function(B);
+const a = dynamo.function(A);
+const b = dynamo.function(B);
 
 test('has the correct signature', t => {
   assert<Has<typeof a, ((a: string) => string)>>(true);

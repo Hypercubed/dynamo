@@ -1,7 +1,7 @@
 import test from 'ava';
-import { signature, Typed, guard, conversion } from '../src';
+import { signature, Dynamo, guard, conversion } from '../src';
 
-const typed = new Typed();
+const dynamo = new Dynamo();
 
 class BigIntDefinition {
   @guard(BigInt)
@@ -63,9 +63,9 @@ class Times {
   }
 }
 
-typed.add(BigIntDefinition, Complex);
+dynamo.add(BigIntDefinition, Complex);
 
-const times = typed.function(Times);
+const times = dynamo.function(Times);
 
 test('no conversion', t => {
   t.is(times(true, false), false);

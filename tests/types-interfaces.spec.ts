@@ -1,8 +1,8 @@
 import test from 'ava';
-import { Typed, signature, guard } from '../src';
+import { Dynamo, signature, guard } from '../src';
 import { assert, IsExact } from 'conditional-type-checks';
 
-const typed = new Typed();
+const dynamo = new Dynamo();
 
 function convertGuard<T extends unknown>(_guard: Is<T>, name?: string): Constructor<T> {
   _guard['guard'] = _guard;
@@ -36,7 +36,7 @@ class PersonGuard {
 const Person = PersonGuard;
 type Person = IPerson;
 
-typed.add(Person, Name, Age);
+dynamo.add(Person, Name, Age);
 
 class CreatePerson {
   @signature()
@@ -45,7 +45,7 @@ class CreatePerson {
   }
 }
 
-const createPerson = typed.function(CreatePerson);
+const createPerson = dynamo.function(CreatePerson);
 
 test('types are correct', t => {
   assert<IsExact<Age, number>>(true);
@@ -82,7 +82,7 @@ class GetName {
   }
 }
 
-const getName = typed.function(GetName);
+const getName = dynamo.function(GetName);
 
 test('getName', t => {
   assert<IsExact<typeof getName, (person: Person) => Name>>(true);

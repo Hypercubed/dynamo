@@ -1,9 +1,9 @@
 import test from 'ava';
 import { assert, IsExact, Has } from 'conditional-type-checks';
 
-import { Typed, signature } from '../src';
+import { Dynamo, signature } from '../src';
 
-const typed = new Typed();
+const dynamo = new Dynamo();
 
 class S {
   name = 'foo';
@@ -14,7 +14,7 @@ class S {
   }
 }
 
-const s = typed.function(S);
+const s = dynamo.function(S);
 
 test('has the correct signature', t => {
   assert<IsExact<typeof s, ((a: number) => string)>>(true);
@@ -70,7 +70,7 @@ class F {
   }
 }
 
-const f = typed.function(F);
+const f = dynamo.function(F);
 
 test('has correct sig', t => {
   assert<Has<typeof f, ((value: object) => string)>>(true);
@@ -105,7 +105,7 @@ class T {
 
 test('throws for unknown type', t => {
   t.throws(() => {
-    const fn = typed.function(T);
+    const fn = dynamo.function(T);
   }, 'Unknown type "UnknownType"');
 });
 
@@ -118,7 +118,7 @@ class S2 {
   }
 }
 
-const s2 = typed.function(S2);
+const s2 = dynamo.function(S2);
 
 test('functions as props has the correct signature', t => {
   assert<IsExact<typeof s2, ((a: number) => string)>>(true);

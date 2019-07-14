@@ -1,9 +1,9 @@
 import test from 'ava';
 import { assert, IsExact, Has } from 'conditional-type-checks';
 
-import { Typed, signature, guard } from '../src';
+import { Dynamo, signature, guard } from '../src';
 
-const typed = new Typed();
+const dynamo = new Dynamo();
 
 class Integer extends Number {
   @guard()
@@ -123,11 +123,11 @@ class Name {
   }
 }
 
-typed.add(Zero, Positive, Negitive, Even, Odd, Person, Baby);
+dynamo.add(Zero, Positive, Negitive, Even, Odd, Person, Baby);
 
-const sign = typed.function(Sign);
-const parity = typed.function(Parity);
-const name = typed.function(Name);
+const sign = dynamo.function(Sign);
+const parity = dynamo.function(Parity);
+const name = dynamo.function(Name);
 
 test('sign', t => {
   assert<IsExact<typeof sign, (x: number) => string>>(true);

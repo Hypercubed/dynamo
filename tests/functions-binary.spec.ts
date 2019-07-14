@@ -1,9 +1,9 @@
 import test from 'ava';
 import { assert, IsExact, Has } from 'conditional-type-checks';
 
-import { Typed, signature } from '../src';
+import { Dynamo, signature } from '../src';
 
-const typed = new Typed();
+const dynamo = new Dynamo();
 
 class Add {
   name = 'add';
@@ -19,7 +19,7 @@ class Add {
   }
 }
 
-const add = typed.function(Add);
+const add = dynamo.function(Add);
 
 test('has the correct signature', t => {
   assert<Has<typeof add, ((a: number, b: number) => number)>>(true);
@@ -61,13 +61,12 @@ class Mul {
   }
 }
 
-const mul = typed.function(Mul);
+const mul = dynamo.function(Mul);
 
 test('mul has the correct signature', t => {
   assert<Has<typeof mul, ((a: number, b: number) => number)>>(true);
   assert<Has<typeof mul, ((a: string, b: number) => string)>>(true);
 
-  // this typed-function is unnamed
   t.is(mul.name, 'Mul');
   t.is(mul.length, 2);
 });
@@ -85,7 +84,7 @@ test('should pass context', t => {
     }
   }
 
-  const f = typed.function(F);
+  const f = dynamo.function(F);
 
   t.is(f.call('this string', 'a', 'b'), `the context to strings is "this string"`);
   t.is(f.call('a different string', 1, 2), `the context to numbers is "a different string"`);

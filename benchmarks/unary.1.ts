@@ -2,7 +2,7 @@ import * as assert from 'assert';
 import * as suite from 'chuhai';
 
 import * as typed from 'typed-function';
-import { Typed, signature } from '../src';
+import { Dynamo, signature } from '../src';
 
 const I = (a: any) => a;
 
@@ -17,8 +17,8 @@ class Fn {
   }
 }
 
-const tsTyped = new Typed();
-const tsTypedFn = tsTyped.function(Fn);
+const dynamo = new Dynamo();
+const dynamoFn = dynamo.function(Fn);
 
 const base = (a: number) => {
   if (typeof a === 'number') {
@@ -41,8 +41,8 @@ suite('unary function, one overides', (s: any) => {
     result = base(input);
   });
 
-  s.bench('ts-typed-function', () => {
-    result = tsTypedFn(input);
+  s.bench('dynamo function', () => {
+    result = dynamoFn(input);
   });
 
   s.bench('typed-function', () => {

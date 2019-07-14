@@ -1,5 +1,5 @@
 import test from 'ava';
-import { Typed, signature, guard } from '../src';
+import { Dynamo, signature, guard } from '../src';
 import { Number as NumberType, String as StringType, Static, Record, Runtype, Constraint, Literal } from 'runtypes';
 import { assert, IsExact } from 'conditional-type-checks';
 
@@ -14,7 +14,7 @@ function convertConstraint<T extends Runtype<unknown>>(constraint: T, name?: str
   return constraint as any;
 }
 
-const typed = new Typed();
+const dynamo = new Dynamo();
 
 const nameConstraint = StringType.withConstraint(x => {
   return x.length > 0;
@@ -41,7 +41,7 @@ const personRecord = Record({
 const Person = convertConstraint(personRecord);
 type Person = Static<typeof personRecord>;
 
-typed.add(Name, Age, Person);
+dynamo.add(Name, Age, Person);
 
 class CreatePerson {
   @signature()
@@ -50,7 +50,7 @@ class CreatePerson {
   }
 }
 
-const createPerson = typed.function(CreatePerson);
+const createPerson = dynamo.function(CreatePerson);
 
 test('types are correct', t => {
   assert<IsExact<Age, number>>(true);
@@ -84,7 +84,7 @@ class GetName {
   }
 }
 
-const getName = typed.function(GetName);
+const getName = dynamo.function(GetName);
 
 test('getName', t => {
   assert<IsExact<typeof getName, (person: Person) => Name>>(true);

@@ -1,7 +1,7 @@
 import test from 'ava';
-import { Typed, signature, conversion, guard, Any } from '../src';
+import { Dynamo, signature, conversion, guard, Any } from '../src';
 
-const typed = new Typed();
+const dynamo = new Dynamo();
 
 class BoxedValue {
   @guard()
@@ -26,7 +26,7 @@ class BoxedValue {
   }
 }
 
-typed.add(BoxedValue);
+dynamo.add(BoxedValue);
 
 class Fn1 {
   @signature()
@@ -47,7 +47,7 @@ class Fn1 {
   }
 }
 
-const fn = typed.function(Fn1);
+const fn = dynamo.function(Fn1);
 
 test('calling the function works', t => {
   t.is(fn(new BoxedValue(true, 'boolean')), `boxed value true is a boolean`);

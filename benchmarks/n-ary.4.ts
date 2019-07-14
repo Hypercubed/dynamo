@@ -2,8 +2,8 @@ import * as assert from 'assert';
 import * as suite from 'chuhai';
 
 import * as typed from 'typed-function';
-import Overload from "function-overloader";
-import { Typed, signature } from '../src';
+import Overload from 'function-overloader';
+import { Dynamo, signature } from '../src';
 
 const polymorphic = require('polymorphic');
 const poly = polymorphic();
@@ -36,8 +36,8 @@ class Fn {
   d = obj['boolean'];
 }
 
-const tsTyped = new Typed();
-const tsTypedFn = tsTyped.function(Fn);
+const dynamo = new Dynamo();
+const dynamoFn = dynamo.function(Fn);
 
 function overload() {
   return Overload
@@ -82,8 +82,8 @@ suite('n-ary function, four overides', (s: any) => {
     result = input.map(a => base.apply(null, a));
   });
 
-  s.bench('ts-typed-function', () => {
-    result = input.map(a => tsTypedFn.apply(null, a));
+  s.bench('dynamo function', () => {
+    result = input.map(a => dynamoFn.apply(null, a));
   });
 
   s.bench('overload', () => {

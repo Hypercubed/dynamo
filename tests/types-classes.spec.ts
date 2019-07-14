@@ -1,9 +1,9 @@
 import test from 'ava';
 import { assert, IsExact, Has } from 'conditional-type-checks';
 
-import { Typed, signature, guard } from '../src';
+import { Dynamo, signature, guard } from '../src';
 
-const typed = new Typed();
+const dynamo = new Dynamo();
 
 class Name extends String {
   @guard()
@@ -31,7 +31,7 @@ class Person {
   }
 }
 
-typed.add(Name, Age, Person);
+dynamo.add(Name, Age, Person);
 
 class CreatePerson {
   @signature()
@@ -40,7 +40,7 @@ class CreatePerson {
   }
 }
 
-const createPerson = typed.function(CreatePerson);
+const createPerson = dynamo.function(CreatePerson);
 
 test('types are correct', t => {
   assert<Has<number, Age>>(true);
@@ -80,7 +80,7 @@ class GetName {
   }
 }
 
-const getName = typed.function(GetName);
+const getName = dynamo.function(GetName);
 
 test('getName', t => {
   assert<IsExact<typeof getName, (person: Person) => Name>>(true);

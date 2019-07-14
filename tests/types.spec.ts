@@ -1,7 +1,7 @@
 import test from 'ava';
-import { signature, Typed, guard } from '../src';
+import { signature, Dynamo, guard } from '../src';
 
-const typed = new Typed();
+const dynamo = new Dynamo();
 
 class Fish {
   @guard()
@@ -12,7 +12,7 @@ class Fish {
   constructor(public name: string) {}
 }
 
-typed.add(Fish);
+dynamo.add(Fish);
 
 test('implicit type', t => {
   class Fn {
@@ -32,7 +32,7 @@ test('implicit type', t => {
     }
   }
   
-  const fn = typed.function(Fn);
+  const fn = dynamo.function(Fn);
 
   t.is(typeof fn, 'function');
   t.is(fn(15, true), 'a is the number 15, b is TRUE');
@@ -66,7 +66,7 @@ test('explicit type', t => {
     }
   }
   
-  const fn = typed.function(Fn);
+  const fn = dynamo.function(Fn);
 
   t.is(typeof fn, 'function');
   t.is(fn(15, true), 'a is the number 15, b is TRUE');
@@ -100,7 +100,7 @@ class Tests {
   }
 }
 
-typed.add(Tests);
+dynamo.add(Tests);
 
 test('adding multiple types', t => {
   class Fn {
@@ -120,7 +120,7 @@ test('adding multiple types', t => {
     }
   }
   
-  const fn = typed.function(Fn);
+  const fn = dynamo.function(Fn);
 
   t.is(fn({a: 10}), 'a is a number');
   t.is(fn({a: 0}), 'a is zero');
@@ -140,7 +140,7 @@ test('prevent collisions', t => {
     constructor(public name: string) {}
   }
 
-  typed.add(Fish);
+  dynamo.add(Fish);
 
   class Fn {
     @signature(oldFish)
@@ -154,7 +154,7 @@ test('prevent collisions', t => {
     }
   }
   
-  const fn = typed.function(Fn);
+  const fn = dynamo.function(Fn);
 
   t.is(fn(new Fish('Nemo')), `a is the new fish`);
   t.is(fn(new oldFish('Nemo')), `a is the old fish`);

@@ -1,9 +1,9 @@
 import test from 'ava';
 import { assert, IsExact, Has } from 'conditional-type-checks';
 
-import { Typed, signature } from '../src';
+import { Dynamo, signature } from '../src';
 
-const typed = new Typed();
+const dynamo = new Dynamo();
 
 test('union types', t => {
   class Fn {
@@ -13,7 +13,7 @@ test('union types', t => {
     }
   }
 
-  const fn = typed.function(Fn);
+  const fn = dynamo.function(Fn);
 
   assert<IsExact<typeof fn, (arg: number | boolean) => string>>(true);
 

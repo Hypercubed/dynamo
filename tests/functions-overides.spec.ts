@@ -1,15 +1,15 @@
 import test from 'ava';
 import { assert, IsExact, Has } from 'conditional-type-checks';
 
-import { Typed, signature } from '../src';
+import { Dynamo, signature } from '../src';
 
-const typed = new Typed();
+const dynamo = new Dynamo();
 
 class DoublePrim {
   name = 'double';
 
   // Here we are using a single function for multiple types
-  // These are TS overrides
+  // These are TypeScript overrides
   double_prim(a: string): string;
   double_prim(a: number): number;
 
@@ -27,7 +27,7 @@ class DoublePrim {
   }
 }
 
-const double = typed.function(DoublePrim);
+const double = dynamo.function(DoublePrim);
 
 test('has the correct signature', t => {
   assert<Has<typeof double, ((a: number) => number)>>(true);

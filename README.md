@@ -1,4 +1,4 @@
-# ts-typed-function
+# Dynamo
 
 Fast dynamic method dispatch in TypeScript.  Easy to read and understand decorators-based function definitions are converted to dynamic dispatch methods.  Avoids nasty runtime type checking and produces corectly typed methods.
 
@@ -16,9 +16,9 @@ Fast dynamic method dispatch in TypeScript.  Easy to read and understand decorat
 ## TLDR Usage
 
 ```ts
-import { Typed, guard, conversion, signature, Any } from 'ts-typed-function';
+import { Dynamo, guard, conversion, signature, Any } from '@hypercubed/dynamo';
 
-const typed = new Typed();
+const dynamo = new Dynamo();
 
 class Complex {
   @guard()
@@ -40,7 +40,7 @@ class Complex {
   }
 }
 
-typed.add(Complex);
+dynamo.add(Complex);
 
 class Add {
   name: 'add';
@@ -59,7 +59,7 @@ class Add {
 }
 
 // typed as `((number, number) => number) & ((number | Complex, number | Complex) => Complex)`
-const times = typed.function(Times);
+const times = dynamo.function(Times);
 
 add(3, 6);                                  // 9
 add(new Complex(3, 0), new Complex(0, 6));  // Complex(3, 6)
@@ -71,24 +71,24 @@ times(3, '6');  // TypeError
 
 ## Usage Explanation
 
-### Typed instance
+### Dynamo instance
 
 Start by creating a `typed` environment.  Types and conversions are local to this instance.
 
 ```ts
-import { Typed, guard, conversion, signature, Any } from 'ts-typed-function';
+import { Dynamo, guard, conversion, signature, Any } from '@hypercubed/dynamo';
 
-const typed = new Typed();
+const dynamo = new Dynamo();
 ```
 
-The `Typed` constructor also accepts an options object with the following options:
+The `Dynamo` constructor also accepts an options object with the following options:
 
 - `types` - Instead of adding default types, uses this object.  Passing `false` allows you to have no default types.
-- `autoadd` - If `autoadd` is true, when unknown types are encountered (either as a conversion or in a function signature) ts-typed-function will them automatically.  If the typed does not have a `@guard` defined an `instanceof X` guard will be added.
+- `autoadd` - If `autoadd` is true, when unknown types are encountered (either as a conversion or in a function signature) Dynamo will add them automatically.  If the type does not have a `@guard` defined an `instanceof X` guard will be used.
 
 ### Signatures
 
-Typed-functions are defined using a class with one or more `@signature` decorators and the `typed.function` method.
+Dynamic methods are defined using a class with one or more `@signature` decorators and the `dynamo.function` method.
 
 ```ts
 class Add {
@@ -104,7 +104,7 @@ class Add {
 }
 
 // correctly typed as `((a: string, a: string) => string & (a: number, a: number) => number)`
-const add = typed.function(Add);
+const add = dynamo.function(Add);
 
 add(20, 22);             // 42
 add('Hello', 'World');   // "Hello World"
@@ -113,7 +113,7 @@ add('Hello', 'World');   // "Hello World"
 add('Hello', 42);  // TypeError
 ```
 
-This library uses metadata reflections to infer types from the TypeScript type signatures.  Since TypeScript only supports [basic type serialization](http://blog.wolksoftware.com/decorators-metadata-reflection-in-typescript-from-novice-to-expert-part-4#3-basic-type-serialization_1) only basic types can be inferred.  Basic types defined by default are the primitives `number`, `string`, `boolean` and the constructors `Array`, `Function`, `Date`, and `RegExp`.  Types that are class constructors are are also supported but must be defined per `Typed` instance (see types below).
+This library uses metadata reflections to infer types from the TypeScript type signatures.  Since TypeScript only supports [basic type serialization](http://blog.wolksoftware.com/decorators-metadata-reflection-in-typescript-from-novice-to-expert-part-4#3-basic-type-serialization_1) only basic types can be inferred.  Basic types defined by default are the primitives `number`, `string`, `boolean` and the constructors `Array`, `Function`, `Date`, and `RegExp`.  Types that are class constructors are are also supported but must be defined per `Dynamo` instance (see types below).
 
 TypeScript serializes both `undefined` and `null` as `void 0`, so these types should be explicitly listed in the signature.  Use the predefined class `Any` for `unknown` or `any`.
 
@@ -136,7 +136,7 @@ class Inspect {
 }
 
 // correctly typed as `((a: undefined) => string & (a: null) => string & (a: unknown) => string)`
-const inspect = typed.function(Inspect);
+const inspect = dynamo.function(Inspect);
 
 inspect(undefined); // 'a is undefined'
 inspect(null);      // 'a is null'
@@ -159,7 +159,7 @@ class Add {
 }
 
 // correctly typed as `((a: string, b: number | string) => string) & (a: number, a: number) => number)`
-const add = typed.function(Add);
+const add = dynamo.function(Add);
 
 add(20, 22);            // 42
 add('Hello', 'World');  // 'Hello World'
@@ -187,7 +187,7 @@ class AddStrings extends AddNumber {
 }
 
 // has the type of `((a: number, a: number) => number) & ((a: string, b:  number | string) => string)`
-const add = typed.function(Print);  
+const add = dynamo.function(Print);  
 
 add(20, 22);            // 42
 add('Hello', 'World');  // 'Hello World'
@@ -209,7 +209,7 @@ class Complex {
   }
 }
 
-typed.add(Complex);
+dynamo.add(Complex);
 ```
 
 #### Constraints
@@ -224,7 +224,7 @@ class Integer extends Number {
   }
 }
 
-typed.add(Integer);
+dynamo.add(Integer);
 ```
 
 Guards defined on classes are inherited.
@@ -238,7 +238,7 @@ class Even extends Integer {
   }
 }
 
-typed.add(Even);
+dynamo.add(Even);
 ```
 
 In the examples above the runtime type guards exists on the class itself.  Guards can be added to other classes by passing the class to the decorator.
@@ -258,7 +258,7 @@ class Numbers {
   }
 }
 
-typed.add(Numbers);
+dynamo.add(Numbers);
 ```
 
 In these cases the definitions are attached not attached to the type class, in other words, they are not inherited.
@@ -286,7 +286,7 @@ class StringOrStringArray {
   }
 }
 
-typed.add(StringOrStringArray);
+dynamo.add(StringOrStringArray);
 
 class Fn {
   @signature(StringOrStringArrayGuard)
@@ -310,7 +310,7 @@ class StringOrStringArrayGuard {
 const StringOrStringArray =  StringOrStringArrayGuard;
 type StringOrStringArray = string | string[];
 
-typed.add(StringOrStringArray);
+dynamo.add(StringOrStringArray);
 
 class Fn {
   @signature()
@@ -339,7 +339,7 @@ class PersonGuard {
 const Person = PersonGuard;
 type Person = IPerson;
 
-typed.add(Person);
+dynamo.add(Person);
 
 class GetName {
   @signature()
@@ -368,10 +368,10 @@ class Complex {
   constructor(public re: number, public im: number) {}
 }
 
-typed.add(Complex);
+dynamo.add(Complex);
 ```
 
-When defining the function add an override to the type to get the correct signature, ts-typed-function will handle the conversion.
+When defining the function add an override to the type to get the correct signature, Dynamo will handle the conversion.
 
 ```ts
 class add {
@@ -386,7 +386,7 @@ class add {
 }
 
 // typed as (a: number | Complex, b: number | Complex) => Complex
-const add = typed.function(Add);
+const add = dynamo.function(Add);
 ```
 
 Function methods are evaluated with priority from top to bottom.  Note in this case the `number` method is evoked if both arguments are numbers, the complex method is invoked only when one or both are are `Complex` instances.
@@ -409,7 +409,7 @@ class add {
 }
 
 // typed as `((a: number, b: number) => number & (a: number | Complex, b: number | Complex) => Complex)`
-const add = typed.function(Add);
+const add = dynamo.function(Add);
 
 add(20, 22);                                  // 42
 add(new Complex(20, 0), new Complex(0, 22));  // Complex(20, 22)

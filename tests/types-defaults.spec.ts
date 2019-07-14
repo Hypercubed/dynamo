@@ -1,7 +1,7 @@
 import test from 'ava';
-import { signature, Typed, Any } from '../src';
+import { signature, Dynamo, Any } from '../src';
 
-const typed = new Typed();
+const dynamo = new Dynamo();
 
 class Fn {
   @signature()
@@ -61,7 +61,7 @@ class Fn {
   }
 }
 
-const fn = typed.function(Fn);
+const fn = dynamo.function(Fn);
 
 test('default types', t => {
   t.is(fn(42), '42 is a number');
@@ -89,7 +89,7 @@ class Fn2 {
   }
 }
 
-const fn2 = typed.function(Fn2);
+const fn2 = dynamo.function(Fn2);
 
 test('complex default types', t => {
   t.is(fn2(42), '42 is a string or number');
@@ -112,7 +112,7 @@ class Fn3 {
   }
 }
 
-const fn3 = typed.function(Fn3);
+const fn3 = dynamo.function(Fn3);
 
 test('complex default types with null and undefined', t => {
   t.is(fn3('42'), '42 is a string or undefined');

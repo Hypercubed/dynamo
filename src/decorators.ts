@@ -1,6 +1,6 @@
-export const META_METHODS = Symbol('ts-typed-function:params');
-export const META_GUARDS = Symbol('ts-typed-function:guards');
-export const META_CONVERSIONS = Symbol('ts-typed-function:guards');
+export const META_METHODS = Symbol('dynamo:params');
+export const META_GUARDS = Symbol('dynamo:guards');
+export const META_CONVERSIONS = Symbol('dynamo:guards');
 
 import { fixType } from './types';
 

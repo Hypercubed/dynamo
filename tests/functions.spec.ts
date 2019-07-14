@@ -1,12 +1,12 @@
 import test from 'ava';
 
-import { Typed, signature } from '../src';
+import { Dynamo, signature } from '../src';
 
-const typed = new Typed();
+const dynamo = new Dynamo();
 
 test('should throw an error when not providing any signatures', t => {
   t.throws(() => {
-    typed.function(class A {});
+    dynamo.function(class A {});
   }, 'No signatures provided');
 });
 
@@ -23,7 +23,7 @@ test('should throw an error when composing with an unknown type', t => {
       }
     }
 
-    const fn = typed.function(SN);
+    const fn = dynamo.function(SN);
   }, 'Unknown type "Foo"');
 });
 
@@ -41,14 +41,14 @@ test.skip('should throw when signatures collide', t => {
       }
     }
     
-    const f = typed.function(F);
+    const f = dynamo.function(F);
     t.is(f(), 'Null');
 
   }, 'Unknown type "Foo$0"');
 });
 
 test('can be created with no default types', t => {
-  const typed2 = new Typed({ types: undefined });
+  const typed2 = new Dynamo({ types: undefined });
 
   t.throws(() => {
     class Foo {

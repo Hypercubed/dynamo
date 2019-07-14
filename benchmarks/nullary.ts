@@ -1,7 +1,7 @@
 import * as assert from 'assert';
 import * as suite from 'chuhai';
 
-import { Typed, signature } from '../src';
+import { Dynamo, signature } from '../src';
 
 class Fn {
   @signature()
@@ -10,8 +10,8 @@ class Fn {
   }
 }
 
-const tsTyped = new Typed();
-const tsTypedFn = tsTyped.function(Fn);
+const dynamo = new Dynamo();
+const dynamoFn = dynamo.function(Fn);
 
 const base = () => {
   return `Hello World`;
@@ -30,7 +30,7 @@ suite('nullary', (s: any) => {
     result = base();
   });
 
-  s.bench('ts-typed-function', () => {
-    result = tsTypedFn();
+  s.bench('dynamo function', () => {
+    result = dynamoFn();
   });
 });

@@ -12,7 +12,7 @@ interface Case extends Converter {
   method: AnyFunction;
 }
 
-interface TypedOptions {
+interface DynamoOptions {
   types: any;
   autoadd: boolean;
 }
@@ -24,7 +24,7 @@ interface TypeData {
   conversions: Converter[];
 }
 
-const defaultOptions: TypedOptions = {
+const defaultOptions: DynamoOptions = {
   types: DefaultTypes,
   autoadd: false
 };
@@ -34,10 +34,10 @@ function nextId() {
   return `type-${_id++}`;
 }
 
-export class Typed {
+export class Dynamo {
   private typeData = new WeakMap<Type, TypeData>(); 
 
-  constructor(private options?: Partial<TypedOptions>) {
+  constructor(private options?: Partial<DynamoOptions>) {
     this.options = {
       ...defaultOptions,
       ...options
@@ -82,7 +82,7 @@ export class Typed {
       });
     }
 
-    const fn = this._makeFunction(cases, maxLength);
+    const fn = makeFunction(cases, maxLength);
 
     if (fn.length !== maxLength) {
       Object.defineProperty(fn, 'length', { value: maxLength });
@@ -90,53 +90,6 @@ export class Typed {
 
     Object.defineProperty(fn, 'name', { value: name });
     return fn as any;
-  }
-
-  private _makeFunction(cases: Case[], maxLength: number): AnyFunction {
-    // Todo Optimizations:
-    // When min = max, skip length checks?
-    // optimized functions for sigs < 6, skip choose
-    // const len = guards.length;
-    const methods = cases.map(g => g.method);
-
-    if (maxLength === 0) {
-      // Special case when the function is a nullary
-      // no guards or conversions possible
-      // not very usefull anyway
-      const m0 = methods[0];
-      return function() {
-        if (arguments.length > 0) {
-          throw new Error(`Expected 0 arguments, but got ${arguments.length}`);
-        }
-        return m0.call(this);
-      };
-    }
-
-    const description = cases.map(g => g.name).join(' or ');
-    const tests = cases.map(g => g.test);
-    const converters = cases.map(g => g.convert);
-
-    const n = tests.length - 1;
-    const startAt = tests.length % 4;
-    return function(...args: unknown[]) {
-      let i = -1;
-
-      switch(startAt) {
-        case 0: if (tests[++i](args)) return methods[i].apply(this, converters[i](args));
-        case 3: if (tests[++i](args)) return methods[i].apply(this, converters[i](args));
-        case 2: if (tests[++i](args)) return methods[i].apply(this, converters[i](args));
-        case 1: if (tests[++i](args)) return methods[i].apply(this, converters[i](args));
-      }
-
-      while (i < n) {
-        if (tests[++i](args)) return methods[i].apply(this, converters[i](args));
-        if (tests[++i](args)) return methods[i].apply(this, converters[i](args));
-        if (tests[++i](args)) return methods[i].apply(this, converters[i](args));
-        if (tests[++i](args)) return methods[i].apply(this, converters[i](args));
-      }
-  
-      throw new TypeError(`Unexpected type of arguments. Expected ${description}.`);
-    };
   }
 
   /**
@@ -236,8 +189,6 @@ export class Typed {
   }
 }
 
-export const typed = new Typed();
-
 function getName(token: Type | Type[]): string {
   if (token === null || typeof token === 'undefined') {
     return String(token);
@@ -247,4 +198,51 @@ function getName(token: Type | Type[]): string {
   } catch (err) {
     return 'unknown';
   }
+}
+
+function makeFunction(cases: Case[], maxLength: number): AnyFunction {
+  // Todo Optimizations:
+  // When min = max, skip length checks?
+  // optimized functions for sigs < 6, skip choose
+  // const len = guards.length;
+  const methods = cases.map(g => g.method);
+
+  if (maxLength === 0) {
+    // Special case when the function is a nullary
+    // no guards or conversions possible
+    // not very usefull anyway
+    const m0 = methods[0];
+    return function() {
+      if (arguments.length > 0) {
+        throw new Error(`Expected 0 arguments, but got ${arguments.length}`);
+      }
+      return m0.call(this);
+    };
+  }
+
+  const description = cases.map(g => g.name).join(' or ');
+  const tests = cases.map(g => g.test);
+  const converters = cases.map(g => g.convert);
+
+  const n = tests.length - 1;
+  const startAt = tests.length % 4;
+  return function(...args: unknown[]) {
+    let i = -1;
+
+    switch(startAt) {
+      case 0: if (tests[++i](args)) return methods[i].apply(this, converters[i](args));
+      case 3: if (tests[++i](args)) return methods[i].apply(this, converters[i](args));
+      case 2: if (tests[++i](args)) return methods[i].apply(this, converters[i](args));
+      case 1: if (tests[++i](args)) return methods[i].apply(this, converters[i](args));
+    }
+
+    while (i < n) {
+      if (tests[++i](args)) return methods[i].apply(this, converters[i](args));
+      if (tests[++i](args)) return methods[i].apply(this, converters[i](args));
+      if (tests[++i](args)) return methods[i].apply(this, converters[i](args));
+      if (tests[++i](args)) return methods[i].apply(this, converters[i](args));
+    }
+
+    throw new TypeError(`Unexpected type of arguments. Expected ${description}.`);
+  };
 }

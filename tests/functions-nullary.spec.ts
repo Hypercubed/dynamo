@@ -1,9 +1,9 @@
 import test from 'ava';
 import { assert, IsExact, Has } from 'conditional-type-checks';
 
-import { Typed, signature } from '../src';
+import { Dynamo, signature } from '../src';
 
-const typed = new Typed();
+const dynamo = new Dynamo();
 
 class S {
   name = 'foo';
@@ -14,7 +14,7 @@ class S {
   }
 }
 
-const s = typed.function(S);
+const s = dynamo.function(S);
 
 test('has the correct signature', t => {
   assert<IsExact<typeof s, (() => string)>>(true);
@@ -53,7 +53,7 @@ test('should pass context', t => {
     }
   }
 
-  const f = typed.function(F);
+  const f = dynamo.function(F);
 
   t.is(f.call('this string'), `context is "this string"`);
 });

@@ -1,4 +1,4 @@
-# ts-typed-function
+# @hypercubed/dynamo
 
 ## Look into
 - `guard` and `conversions` on function definition class (isolated to a single?)
