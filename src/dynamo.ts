@@ -45,14 +45,15 @@ export class Dynamo {
     if (this.options.types) {
       this.add(this.options.types);
     }
+
+    this.add = this.add.bind(this);
   }
 
-  add(...ctors: Type[]) {
+  add(...ctors: Type[]): void {
     ctors.forEach(c => {
       this.addTypes(c);
       this.addConversions(c);      
     });
-    return this;
   }
 
   function<T extends Constructor<any>>(ctor: T): FunctionProperties<InstanceType<T>> {
