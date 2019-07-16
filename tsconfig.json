@@ -4,7 +4,8 @@
     "emitDecoratorMetadata": true,
     "strictNullChecks": false,
     "target": "esnext",
-    "outDir": "build",
+    "outDir": "build/main",
+    "rootDir": "src",
     "moduleResolution": "node",
     "module": "commonjs",
     "importHelpers": true,
@@ -13,11 +14,11 @@
     "pretty": true,
     "lib": ["es5", "es2015", "es2017"],
     "types": ["node"],
-    "allowJs": true,
-    "sourceMap": true
+    "sourceMap": true,
+    "declaration": true,
+    "esModuleInterop": true
   },
   "include": [
-    "tests/**/*.ts",
     "src/**/*.ts"
   ],
   "exclude": [
