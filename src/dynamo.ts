@@ -8,7 +8,11 @@ import { Converter, union, tuple, matcher, intersect, mapper, identity } from '.
 import { defaultTypes } from './types';
 import { UniversalWeakMap } from './universal-weak-map';
 
-interface Case extends Converter {
+interface Case {
+  id: string;
+  name: string;
+  test: Is;
+  convert: Convert<unknown[], unknown[]>;
   method: AnyFunction;
 }
 
@@ -151,8 +155,7 @@ export class Dynamo {
       for (const key in map) {
         const type = map[key] === '' ? ctor : map[key];
         const data = this.typeData.get(type) || { id: nextId(), name: getName(type), tests: [], conversions: [] };
-        // @ts-ignore
-        const test = ctor[key];
+        const test: Is<any> = (ctor as any)[key];
         this.typeData.set(type, {
           ...data,
           tests: [ ...(data.tests || []), test ]
@@ -181,8 +184,7 @@ export class Dynamo {
       const conversion: Converter = {
         ...fromTypeData,
         test: intersect(fromTypeData.tests),
-        // @ts-ignore
-        convert: ctor[key]
+        convert: (ctor as any)[key] as Convert
       };
 
       const conversions = toTypeData.conversions || [];

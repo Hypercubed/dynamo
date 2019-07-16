@@ -3,7 +3,7 @@ export interface Guard<T = any> {
   name: string;
 }
 
-export interface Converter<T = any, U = any> {
+export interface Converter<T = unknown, U = unknown> {
   id: string;
   name: string;
   test: Is<T>;
@@ -70,7 +70,6 @@ export function matcher<T = unknown, U = unknown>(cons: Array<Converter<T, U>>):
   if (cons.length === 1) {
     // optimization when length is one
     return (x: unknown) => {
-      // @ts-ignore
       if (t0(x)) return c0(x);
     };
   }
@@ -103,7 +102,7 @@ export function matcher<T = unknown, U = unknown>(cons: Array<Converter<T, U>>):
  * Converts an array of guards into a guard for the tuple
  * @param guards an array of guards
  */
-export function tuple<T = any>(guards: Array<Guard<T>>): Guard<any> {
+export function tuple<T = unknown>(guards: Array<Guard<T>>): Guard<T[]> {
   const name = `[${guards.map(g => g.name).join(',')}]`;
 
   if (guards.length === 0) {
@@ -128,7 +127,7 @@ export function tuple<T = any>(guards: Array<Guard<T>>): Guard<any> {
   const t1 = tests[1];
   const len = guards.length;
   const n = guards.length - 1;
-  const test = (x: any): x is any => {
+  const test = (x: any): x is T[] => {
     // optimized for couples
     if (x.length !== len) return false;
     if (!t0(x[0])) return false;
