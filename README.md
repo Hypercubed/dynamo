@@ -1,11 +1,11 @@
 # Dynamo
 
-Fast dynamic method dispatch in TypeScript.  Easy to read and understand decorators-based function definitions are converted to dynamic dispatch methods.  Avoids nasty runtime type checking and produces corectly typed methods.
+Fast dynamic method dispatch in TypeScript.  Easy to read and understand decorators-based function definitions are converted to runtime multimethods.  Avoids nasty runtime type checking and produces correctly typed methods.
 
 ## Introduction
 
-* Compose multiple method signatures into a correctly typed dynamic dispatch function.
-* Runtime type-checking of function arguments based on TypeScript type signatures (when possible).
+* Compose multiple method signatures into a correctly typed dynamic dispatch function (multimethods).
+* Runtime type-checking of function arguments based on TypeScript type annotations (when possible).
 * Custom defined types coercions.
 * Easily supports union types, `any` type, and variable arguments.
 * Excellent mechanism for type constraints.
@@ -73,7 +73,7 @@ times(3, '6');  // TypeError
 
 ### Dynamo instance
 
-Start by creating a `typed` environment.  Types and conversions are local to this instance.
+Start by creating a `Dynamo` environment.  Types and conversions are local to this instance.
 
 ```ts
 import { Dynamo, guard, conversion, signature, Any } from '@hypercubed/dynamo';
@@ -83,22 +83,22 @@ const dynamo = new Dynamo();
 
 The `Dynamo` constructor also accepts an options object with the following options:
 
-- `types` - Instead of adding default types, uses this object.  Passing `false` allows you to have no default types.
+- `types` - Instead of adding default types, uses this object or array of objects.  Passing `false` allows you to have no default types.
 - `autoadd` - If `autoadd` is true, when unknown types are encountered (either as a conversion or in a function signature) Dynamo will add them automatically.  If the type does not have a `@guard` defined an `instanceof X` guard will be used.
 
 ### Signatures
 
-Dynamic methods are defined using a class with one or more `@signature` decorators and the `dynamo.function` method.
+Dynamic methods are defined using a class with one or more `@signature` decorators and the `dynamo.function` method.  The first method matching a argument signature is evaluated.
 
 ```ts
 class Add {
   @signature()
-  str(a: string, b: string): string {
+  strings(a: string, b: string): string {
     return a + ' ' + b;
   }
 
   @signature()
-  num(a: number, a: number): number {
+  numbers(a: number, a: number): number {
     return a + b;
   }
 }
@@ -113,24 +113,24 @@ add('Hello', 'World');   // "Hello World"
 add('Hello', 42);  // TypeError
 ```
 
-This library uses metadata reflections to infer types from the TypeScript type signatures.  Since TypeScript only supports [basic type serialization](http://blog.wolksoftware.com/decorators-metadata-reflection-in-typescript-from-novice-to-expert-part-4#3-basic-type-serialization_1) only basic types can be inferred.  Basic types defined by default are the primitives `number`, `string`, `boolean` and the constructors `Array`, `Function`, `Date`, and `RegExp`.  Types that are class constructors are are also supported but must be defined per `Dynamo` instance (see types below).
+This library uses metadata reflections to infer types from the TypeScript type annotations.  Since TypeScript only supports [basic type serialization](http://blog.wolksoftware.com/decorators-metadata-reflection-in-typescript-from-novice-to-expert-part-4#3-basic-type-serialization_1) only basic types can be inferred.  Basic types defined by default are the primitives `number`, `string`, `boolean` and the constructors `Array`, `Function`, `Date`, and `RegExp`.  Types that are class constructors are are also supported but must be defined per `Dynamo` instance (see types below).
 
 TypeScript serializes both `undefined` and `null` as `void 0`, so these types should be explicitly listed in the signature.  Use the predefined class `Any` for `unknown` or `any`.
 
 ```ts
 class Inspect {
   @signature(undefined)
-  u(a: undefined): string {
+  inspectString(a: undefined): string {
     return 'a is undefined';
   }
 
   @signature(null)
-  n(a: null): string {
+  inspectNull(a: null): string {
     return 'a is null';
   }
 
   @signature(Any)
-  n(a: unknown): string {
+  inspectAny(a: unknown): string {
     return 'a is something';
   }
 }
@@ -147,14 +147,14 @@ Other types (including `any`, `unknown`, union types, and interfaces) are treate
 
 ```ts
 class Add {
-  @signature(String, [Number, String])
-  add(a: string, b: number | string): string {
-    return '' + a + ' ' + b;
+  @signature()
+  addNumbers(a: number, b: number): string {
+    return a + b;
   }
 
-  @signature()
-  add(a: number, b: number): string {
-    return a + b;
+  @signature(String, [Number, String])
+  addStrings(a: string, b: number | string): string {
+    return '' + a + ' ' + b;
   }
 }
 
@@ -174,14 +174,14 @@ Signatures are inherited:
 ```ts
 class AddNumber {
   @signature()
-  num(a: number, a: number): number {
+  addNumbers(a: number, a: number): number {
     return a + b;
   }
 }
 
 class AddStrings extends AddNumber {
   @signature(String, [Number, String])
-  add(a: string, b: number | string): string {
+  addStrings(a: string, b: number | string): string {
     return '' + a + ' ' + b;
   }
 }
@@ -197,9 +197,11 @@ add('Hello', 42);       // 'Hello 42'
 add(20, 'World');       // TypeError
 ```
 
+Note that the type of the resulting function is determined by the TypeScript type annotations for each method, regardless if the `@signature` decorator was applied to it.  However, the runtime function only includes the methods to which `@signature` was applied.
+
 ### Types
 
-Runtime types are added using the `@guard` decorator and the `typed.add` method.
+Runtime types are defined using the `@guard` decorator and added to a dynamo instance using `dynamo.add`.  Guards are defined using static methods on a class and should be pure functions returning a boolean.  Types (guards) must be explictly assoaciated with a `dynamo` instance (unless using `autoadd`) and must be added to each `dynamo` instance it will be used.
 
 ```ts
 class Complex {
@@ -212,7 +214,19 @@ class Complex {
 dynamo.add(Complex);
 ```
 
-#### Constraints
+`dynamo.add` also works as a decorator:
+
+```ts
+@dynamo.add
+class Complex {
+  @guard()
+  static isComplex(x: unknown): x is Complex {
+    return x instanceof Complex;
+  }
+}
+```
+
+#### Type Constraints
 
 You can add runtime constraints to primitives by extending the primitive constructor.
 
@@ -230,6 +244,13 @@ dynamo.add(Integer);
 Guards defined on classes are inherited.
 
 ```ts
+class Integer extends Number {
+  @guard()
+  static isInteger(x: unknown): x is Integer {
+    return typeof x === 'number' && Number.isInteger(x);
+  }
+}
+
 class Even extends Integer {
   @guard()
   static isEven(x: number): x is Even {
@@ -241,7 +262,7 @@ class Even extends Integer {
 dynamo.add(Even);
 ```
 
-In the examples above the runtime type guards exists on the class itself.  Guards can be added to other classes by passing the class to the decorator.
+In the examples above the runtime type guards exists on the class itself, this is the default when no argumenst are bassed to the `guard` decorator.  Guards can be added for other classes by passing the class to the `guard` decorator.
 
 ```ts
 import Decimal from 'decimal.js';
@@ -261,11 +282,11 @@ class Numbers {
 dynamo.add(Numbers);
 ```
 
-In these cases the definitions are attached not attached to the type class, in other words, they are not inherited.
+In these cases the definitions are not attached to the type class.
 
-#### Complex Types and interfaces
+#### Complex Types and Interfaces
 
-As mention above, TypeScript does not serialize complex types, for example example this will not work as expected since TypeScript will output the type metadata for the parameter `a`  as `Object`.
+As mentioned above, TypeScript does not serialize complex types, for example this will not work as expected since TypeScript will output the type metadata for the parameter `a` as `Object`.
 
 ```ts
 class Fn {
@@ -296,7 +317,7 @@ class Fn {
 }
 ```
 
-Using the following trick we can define a type that will serialize correctly by TypeScript:
+Using the following trick we can define a type that will serialize correctly by TypeScript and minimize redundancy.
 
 ```ts
 class StringOrStringArrayGuard {
@@ -351,7 +372,7 @@ class GetName {
 
 ### Conversions
 
-Runtime conversions are added using the `@conversion` decorator and the `add` method.
+Runtime conversions (coursions) are added using the `@conversion` decorator and the `dynamo.add` method (or as a decorator).
 
 ```ts
 class Complex {
@@ -371,7 +392,7 @@ class Complex {
 dynamo.add(Complex);
 ```
 
-When defining the function add an override to the type to get the correct signature, Dynamo will handle the conversion.
+When defining the function, add an override to the type to get the correct TypeScript definition, Dynamo will handle the conversion.
 
 ```ts
 class add {
@@ -389,7 +410,7 @@ class add {
 const add = dynamo.function(Add);
 ```
 
-Function methods are evaluated with priority from top to bottom.  Note in this case the `number` method is evoked if both arguments are numbers, the complex method is invoked only when one or both are are `Complex` instances.
+As mentioned above, methods are invoked with priority from top to bottom.  Note in this case the `number` method is evoked if both arguments are numbers, the complex method is invoked when one or both are are `Complex` instances.
 
 ```ts
 class add {
