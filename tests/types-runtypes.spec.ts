@@ -8,8 +8,9 @@ interface ConstraintToken<V> extends Constraint<any> {
   new(...args: any[]): V;
 }
 
-function convertConstraint<T extends Runtype<unknown>>(constraint: T, name?: string): ConstraintToken<Static<T>> {
-  constraint['name'] = name ? `${name} ${constraint['tag']}` : constraint['tag'];
+function convertConstraint<T extends Runtype<any>>(constraint: T, name?: string): ConstraintToken<Static<T>> {
+  // @ts-ignore
+  constraint['name'] = name ? `${name} ${constraint['tag'] as any}` : constraint['tag'] as any;
   guard()(constraint, 'guard');
   return constraint as any;
 }

@@ -87,5 +87,7 @@ test('should pass context', t => {
   const f = dynamo.function(F);
 
   t.is(f.call('this string', 'a', 'b'), `the context to strings is "this string"`);
+
+  // @ts-ignore
   t.is(f.call('a different string', 1, 2), `the context to numbers is "a different string"`);
 });

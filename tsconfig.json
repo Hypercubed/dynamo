@@ -16,7 +16,8 @@
     "types": ["node"],
     "sourceMap": true,
     "declaration": true,
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "strict": true
   },
   "include": [
     "src/**/*.ts"

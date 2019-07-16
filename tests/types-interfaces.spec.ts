@@ -5,6 +5,7 @@ import { assert, IsExact } from 'conditional-type-checks';
 const dynamo = new Dynamo();
 
 function convertGuard<T extends unknown>(_guard: Is<T>, name?: string): Constructor<T> {
+  // @ts-ignore
   _guard['guard'] = _guard;
   guard()(_guard, 'guard');
   Object.defineProperty(_guard, 'name', { value: name });

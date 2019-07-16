@@ -151,6 +151,7 @@ export class Dynamo {
       for (const key in map) {
         const type = map[key] === '' ? ctor : map[key];
         const data = this.typeData.get(type) || { id: nextId(), name: getName(type), tests: [], conversions: [] };
+        // @ts-ignore
         const test = ctor[key];
         this.typeData.set(type, {
           ...data,
@@ -180,6 +181,7 @@ export class Dynamo {
       const conversion: Converter = {
         ...fromTypeData,
         test: intersect(fromTypeData.tests),
+        // @ts-ignore
         convert: ctor[key]
       };
 
@@ -216,7 +218,7 @@ function makeFunction(cases: Case[], maxLength: number): AnyFunction {
     // no guards or conversions possible
     // not very usefull anyway
     const m0 = methods[0];
-    return function() {
+    return function(this: any) {
       if (arguments.length > 0) {
         throw new Error(`Expected 0 arguments, but got ${arguments.length}`);
       }
@@ -230,7 +232,7 @@ function makeFunction(cases: Case[], maxLength: number): AnyFunction {
 
   const n = tests.length - 1;
   const startAt = tests.length % 4;
-  return function(...args: unknown[]) {
+  return function(this: any, ...args: unknown[]) {
     let i = -1;
 
     switch(startAt) {

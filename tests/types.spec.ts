@@ -88,14 +88,18 @@ const Zero = Object.create(null);
 // tslint:disable-next-line:variable-name
 const Negative = Object.create(null);
 
+interface A {
+  a: any;
+}
+
 class Tests {
   @guard(Zero)
-  static isZero({a}) {
+  static isZero({a}: A) {
     return a === 0;
   }
 
   @guard(Negative)
-  static isNegative({a}) {
+  static isNegative({a}: A) {
     return a < 0;
   }
 }
@@ -105,17 +109,17 @@ dynamo.add(Tests);
 test('adding multiple types', t => {
   class Fn {
     @signature(Zero)
-    zero({a}): string {
+    zero({a}: A): string {
       return `a is zero`;
     }
 
     @signature(Negative)
-    negative({a}): string {
+    negative({a}: A): string {
       return `a is negative`;
     }
 
     @signature()
-    num({a}): string {
+    num({a}: A): string {
       return `a is a number`;
     }
   }
