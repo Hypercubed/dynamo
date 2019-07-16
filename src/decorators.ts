@@ -2,8 +2,6 @@ export const META_METHODS = Symbol('dynamo:params');
 export const META_GUARDS = Symbol('dynamo:guards');
 export const META_CONVERSIONS = Symbol('dynamo:guards');
 
-import { fixType } from './types';
-
 // A Parameter is a array of types
 export type Parameter = Type[];
 
@@ -76,8 +74,8 @@ export function conversion(fromType?: Type, toType?: Type) {
       map = {
         ...map,
         [key]: {
-          fromType: fixType(fromType),
-          toType: fixType(toType),
+          fromType,
+          toType,
         }
       };
 
@@ -91,14 +89,10 @@ export interface GuardMap {
 }
 
 export function guard(type?: Type) {
+  const arglen = arguments.length;
+
   if (typeof Reflect !== 'object') {
     throw new Error('reflect-metadata not found');
-  }
-
-  // Ensure undefined and null are handled
-  // if arguments.length < 1, type === undefined, which means target is the ctor
-  if (arguments.length === 1) {
-    type = fixType(type);
   }
 
   return (target: any, key: string) => {
@@ -106,7 +100,7 @@ export function guard(type?: Type) {
 
     map = {
       ...map,
-      [key]: type
+      [key]: arglen > 0 ? type : ''
     };
 
     Reflect.defineMetadata(META_GUARDS, map, target);

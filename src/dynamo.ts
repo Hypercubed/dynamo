@@ -1,12 +1,12 @@
-/// <reference path="./types.d.ts" />
+/// <reference path="./index.d.ts" />
 import 'reflect-metadata';
 import {
   META_METHODS, META_GUARDS, META_CONVERSIONS,
   SignatureMap, GuardMap, ConversionMap
 } from './decorators';
 import { Converter, union, tuple, matcher, intersect, mapper, identity } from './guards';
-import { fixType } from './types';
-import { DefaultTypes } from './default-types';
+import { defaultTypes } from './types';
+import { UniversalWeakMap } from './universal-weak-map';
 
 interface Case extends Converter {
   method: AnyFunction;
@@ -25,7 +25,7 @@ interface TypeData {
 }
 
 const defaultOptions: DynamoOptions = {
-  types: DefaultTypes,
+  types: defaultTypes,
   autoadd: false
 };
 
@@ -35,7 +35,7 @@ function nextId() {
 }
 
 export class Dynamo {
-  private typeData = new WeakMap<Type, TypeData>(); 
+  private typeData = new UniversalWeakMap<TypeData>(); 
 
   constructor(private options?: Partial<DynamoOptions>) {
     this.options = {
@@ -43,7 +43,11 @@ export class Dynamo {
       ...options
     };
     if (this.options.types) {
-      this.add(this.options.types);
+      if (Array.isArray(this.options.types)) {
+        this.add(...this.options.types);
+      } else {
+        this.add(this.options.types);
+      }
     }
 
     this.add = this.add.bind(this);
@@ -130,7 +134,6 @@ export class Dynamo {
   }
 
   private getTypeData(type: Type): TypeData {
-    type = fixType(type);
     const name = getName(type);
     if (!this.typeData.has(type)) {
       if (!this.options.autoadd) {
@@ -146,7 +149,7 @@ export class Dynamo {
 
     if (map) {
       for (const key in map) {
-        const type = map[key] || ctor;
+        const type = map[key] === '' ? ctor : map[key];
         const data = this.typeData.get(type) || { id: nextId(), name: getName(type), tests: [], conversions: [] };
         const test = ctor[key];
         this.typeData.set(type, {
