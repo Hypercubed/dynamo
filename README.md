@@ -16,7 +16,7 @@ Fast dynamic method dispatch in TypeScript.  Easy to read and understand decorat
 ## TLDR Usage
 
 ```ts
-import { Dynamo, guard, conversion, signature, Any } from '@hypercubed/dynamo';
+import { Dynamo, guard, conversion, signature } from '@hypercubed/dynamo';
 
 const dynamo = new Dynamo();
 
@@ -59,14 +59,14 @@ class Add {
 }
 
 // typed as `((number, number) => number) & ((number | Complex, number | Complex) => Complex)`
-const times = dynamo.function(Times);
+const add = dynamo.function(Add);
 
 add(3, 6);                                  // 9
 add(new Complex(3, 0), new Complex(0, 6));  // Complex(3, 6)
-times(3, new Complex(0, 6));                // Complex(3, 6)
+add(3, new Complex(0, 6));                // Complex(3, 6)
 
 // @ts-ignore
-times(3, '6');  // TypeError
+add(3, '6');  // TypeError
 ```
 
 ## Usage Explanation
