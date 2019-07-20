@@ -1,3 +1,5 @@
+import { Is, Convert } from './ts-types';
+
 export interface Guard<T = unknown> {
   test: Is<T>;
   name: string;

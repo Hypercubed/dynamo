@@ -1,4 +1,5 @@
 import { guard } from './decorators';
+import { AnyFunction } from './ts-types';
 
 export class Any {
   @guard()

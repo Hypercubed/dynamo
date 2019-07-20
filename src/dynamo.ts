@@ -1,4 +1,4 @@
-/// <reference path="./index.d.ts" />
+/// <reference path="./ts-types.ts" />
 import 'reflect-metadata';
 import {
   META_METHODS, META_GUARDS, META_CONVERSIONS,
@@ -7,6 +7,7 @@ import {
 import { Converter, union, tuple, matcher, intersect, mapper, identity } from './guards';
 import { defaultTypes } from './types';
 import { UniversalWeakMap } from './universal-weak-map';
+import { Type, AnyFunction, Is, Constructor, FunctionProperties } from './ts-types';
 
 interface Case extends Converter {
   method: AnyFunction;

@@ -1,3 +1,5 @@
+import { Type } from './ts-types';
+
 export const META_METHODS = Symbol('dynamo:params');
 export const META_GUARDS = Symbol('dynamo:guards');
 export const META_CONVERSIONS = Symbol('dynamo:guards');
@@ -85,7 +87,7 @@ export function conversion(fromType?: Type, toType?: Type) {
 }
 
 export interface GuardMap {
-  [key: string]: Type;
+  [key: string]: any;
 }
 
 export function guard(type?: Type) {
