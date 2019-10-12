@@ -43,7 +43,7 @@ class Complex {
 dynamo.add(Complex);
 
 class Add {
-  name: 'add';
+  name = 'add';
 
   @signature()
   number(a: number, b: number): number {
