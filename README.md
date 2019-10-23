@@ -35,7 +35,7 @@ class Complex {
 
   add(b: Complex): Complex {
     const re = this.re + b.re;
-    const im = this.re + b.im;
+    const im = this.im + b.im;
     return new Complex(re, im);
   }
 }
