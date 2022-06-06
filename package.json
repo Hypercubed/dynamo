@@ -49,7 +49,7 @@
     "np": "^6.0.0",
     "npm-run-all": "^4.1.2",
     "nyc": "^14.1.1",
-    "polymorphic": "^1.4.3",
+    "polymorphic": "1.4.5",
     "prettier": "^1.10.2",
     "rimraf": "^2.6.3",
     "runtypes": "^4.0.0",
