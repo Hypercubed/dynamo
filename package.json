@@ -43,7 +43,7 @@
     "ava": "^3.0.0",
     "chuhai": "^1.2.0",
     "codecov": "^3.5.0",
-    "conditional-type-checks": "^1.0.1",
+    "conditional-type-checks": "1.0.6",
     "function-overloader": "^2.1.2",
     "grunion": "^1.3.1",
     "np": "^6.0.0",
