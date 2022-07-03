@@ -50,7 +50,7 @@
     "npm-run-all": "^4.1.2",
     "nyc": "^14.1.1",
     "polymorphic": "^1.4.3",
-    "prettier": "^1.10.2",
+    "prettier": "1.19.1",
     "rimraf": "^2.6.3",
     "runtypes": "^4.0.0",
     "ts-node": "^8.3.0",
