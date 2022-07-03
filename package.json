@@ -51,7 +51,7 @@
     "nyc": "^14.1.1",
     "polymorphic": "^1.4.3",
     "prettier": "^1.10.2",
-    "rimraf": "^2.6.3",
+    "rimraf": "2.7.1",
     "runtypes": "^4.0.0",
     "ts-node": "^8.3.0",
     "tslint": "^5.18.0",
