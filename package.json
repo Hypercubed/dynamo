@@ -40,7 +40,7 @@
   },
   "devDependencies": {
     "@types/node": "^12.0.10",
-    "ava": "^3.0.0",
+    "ava": "^5.0.0",
     "chuhai": "^1.2.0",
     "codecov": "^3.5.0",
     "conditional-type-checks": "^1.0.1",
